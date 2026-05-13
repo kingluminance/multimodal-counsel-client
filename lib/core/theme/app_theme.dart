@@ -60,7 +60,7 @@ class AppTheme {
         labelSmall: AppTypography.microLabel,
         labelMedium: AppTypography.microLabel,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.backgroundWhite,
         elevation: 0,
         shape: RoundedRectangleBorder(

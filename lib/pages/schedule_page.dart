@@ -1,144 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
-import '../widgets/risk_chip.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/app_text_field.dart';
-
-// ── 모델 ─────────────────────────────────────────────────────
-
-class _ScheduleItem {
-  final String clientName;
-  final String time; // "HH:MM"
-  final String type;
-  final RiskLevel risk;
-
-  const _ScheduleItem({
-    required this.clientName,
-    required this.time,
-    required this.type,
-    required this.risk,
-  });
-}
-
-// ── 헬퍼 ─────────────────────────────────────────────────────
-
-DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
-
-Color _typeColor(String type) {
-  switch (type) {
-    case '위기 개입':
-      return AppColors.red;
-    case '가족 상담':
-    case '초기 면접':
-      return AppColors.teal;
-    case '프로그램':
-      return AppColors.amber;
-    case '사례 관리':
-      return AppColors.purple;
-    default:
-      return AppColors.primaryBlue;
-  }
-}
-
-// ── 상수 ─────────────────────────────────────────────────────
-
-const _sessionTypeLabels = [
-  '개인 상담',
-  '가족 상담',
-  '위기 개입',
-  '프로그램',
-  '사례 관리',
-  '초기 면접',
-];
-
-const _sessionMethods = ['대면', '비대면', '전화', '방문'];
-
-const _sampleClients = ['김지수', '이준혁', '박서연', '최민준', '한소희'];
-
-// ── 샘플 이벤트 ───────────────────────────────────────────────
-
-final _kToday = _dateOnly(DateTime.now());
-
-Map<DateTime, List<_ScheduleItem>> _buildSampleEvents() {
-  final d = _kToday;
-  return {
-    d: [
-      const _ScheduleItem(
-          clientName: '김지수',
-          time: '10:00',
-          type: '위기 개입',
-          risk: RiskLevel.high),
-      const _ScheduleItem(
-          clientName: '이준혁',
-          time: '14:00',
-          type: '개인 상담',
-          risk: RiskLevel.medium),
-    ],
-    DateTime(d.year, d.month, d.day + 1): [
-      const _ScheduleItem(
-          clientName: '박서연',
-          time: '09:30',
-          type: '초기 면접',
-          risk: RiskLevel.low),
-    ],
-    DateTime(d.year, d.month, d.day + 3): [
-      const _ScheduleItem(
-          clientName: '최민준',
-          time: '13:00',
-          type: '가족 상담',
-          risk: RiskLevel.medium),
-      const _ScheduleItem(
-          clientName: '한소희',
-          time: '15:30',
-          type: '사례 관리',
-          risk: RiskLevel.low),
-    ],
-    DateTime(d.year, d.month, d.day + 5): [
-      const _ScheduleItem(
-          clientName: '이준혁',
-          time: '11:00',
-          type: '개인 상담',
-          risk: RiskLevel.low),
-    ],
-    DateTime(d.year, d.month, d.day - 2): [
-      const _ScheduleItem(
-          clientName: '김지수',
-          time: '16:00',
-          type: '위기 개입',
-          risk: RiskLevel.high),
-    ],
-    DateTime(d.year, d.month, d.day - 5): [
-      const _ScheduleItem(
-          clientName: '박서연',
-          time: '10:30',
-          type: '프로그램',
-          risk: RiskLevel.low),
-      const _ScheduleItem(
-          clientName: '최민준',
-          time: '14:00',
-          type: '개인 상담',
-          risk: RiskLevel.medium),
-    ],
-    DateTime(d.year, d.month, d.day + 8): [
-      const _ScheduleItem(
-          clientName: '한소희',
-          time: '13:30',
-          type: '위기 개입',
-          risk: RiskLevel.high),
-      const _ScheduleItem(
-          clientName: '이준혁',
-          time: '16:00',
-          type: '개인 상담',
-          risk: RiskLevel.low),
-    ],
-  };
-}
-
-final _sampleEvents = _buildSampleEvents();
-
-// ── 페이지 ────────────────────────────────────────────────────
+import 'notification_page.dart';
+import 'schedule_add_page.dart';
+import 'schedule_detail_page.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -148,812 +14,249 @@ class SchedulePage extends StatefulWidget {
 }
 
 class _SchedulePageState extends State<SchedulePage> {
-  DateTime _focusedDay = _kToday;
-  DateTime _selectedDay = _kToday;
+  DateTime _focusedMonth = DateTime(2026, 5);
+  DateTime _selectedDay = DateTime(2026, 5, 14);
 
-  List<_ScheduleItem> _getEventsForDay(DateTime day) =>
-      _sampleEvents[_dateOnly(day)] ?? [];
+  static const _todaySchedules = [
+    {'name': '김민지', 'topic': '진로 상담', 'time': '14:30'},
+    {'name': '박지현', 'topic': '대인관계', 'time': '15:31'},
+    {'name': '이서연', 'topic': '학교생활 적응', 'time': '17:00'},
+  ];
 
-  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    setState(() {
-      _selectedDay = selectedDay;
-      _focusedDay = focusedDay;
-    });
-  }
-
-  void _showAddSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AddScheduleSheet(initialDate: _selectedDay),
-    );
-  }
+  // 상담 예정 날짜 (5월 기준)
+  final Set<int> _scheduledDays = {1, 5, 7, 8, 12, 14, 19, 21, 22, 26, 28};
 
   @override
   Widget build(BuildContext context) {
-    final events = _getEventsForDay(_selectedDay);
-
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
       appBar: AppBar(
         backgroundColor: AppColors.backgroundWhite,
-        elevation: 0,
-        titleSpacing: 16,
-        title: const Text('일정', style: AppTypography.title),
-      ),
-      body: Column(
-        children: [
-          // ── 캘린더 ──────────────────────────────────────────
-          _CalendarSection(
-            focusedDay: _focusedDay,
-            selectedDay: _selectedDay,
-            onDaySelected: _onDaySelected,
-            onPageChanged: (fd) => setState(() => _focusedDay = fd),
-            eventLoader: _getEventsForDay,
+        scrolledUnderElevation: 0,
+        title: Text('일정', style: AppTypography.h3),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: AppColors.primary),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ScheduleAddPage()),
+            ),
           ),
-          const Divider(height: 1, color: AppColors.border),
-
-          // ── 선택 날짜 일정 리스트 ───────────────────────────
-          Expanded(
-            child: _SessionList(date: _selectedDay, items: events),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationPage()),
+            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddSheet,
-        backgroundColor: AppColors.primaryBlue,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text(
-          '상담 일정 추가',
-          style: TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── 캘린더 섹션 ───────────────────────────────────────────────
-
-class _CalendarSection extends StatelessWidget {
-  final DateTime focusedDay;
-  final DateTime selectedDay;
-  final void Function(DateTime, DateTime) onDaySelected;
-  final ValueChanged<DateTime> onPageChanged;
-  final List<_ScheduleItem> Function(DateTime) eventLoader;
-
-  const _CalendarSection({
-    required this.focusedDay,
-    required this.selectedDay,
-    required this.onDaySelected,
-    required this.onPageChanged,
-    required this.eventLoader,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.backgroundWhite,
-      padding: const EdgeInsets.only(bottom: 4),
-      child: TableCalendar<_ScheduleItem>(
-        firstDay: DateTime.utc(2023, 1, 1),
-        lastDay: DateTime.utc(2027, 12, 31),
-        focusedDay: focusedDay,
-        selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-        onDaySelected: onDaySelected,
-        onPageChanged: onPageChanged,
-        eventLoader: eventLoader,
-        calendarFormat: CalendarFormat.month,
-        availableCalendarFormats: const {CalendarFormat.month: ''},
-        startingDayOfWeek: StartingDayOfWeek.monday,
-        rowHeight: 48,
-        daysOfWeekHeight: 30,
-        calendarBuilders: CalendarBuilders<_ScheduleItem>(
-          markerBuilder: (context, day, events) {
-            if (events.isEmpty) return const SizedBox.shrink();
-            final hasHigh =
-                events.any((e) => e.risk == RiskLevel.high);
-            return Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                color: hasHigh ? AppColors.red : AppColors.primaryBlue,
-                shape: BoxShape.circle,
-              ),
-            );
-          },
-        ),
-        headerStyle: const HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
-          titleTextStyle: TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-          leftChevronIcon: Icon(
-            Icons.chevron_left_rounded,
-            color: AppColors.textSecondary,
-            size: 22,
-          ),
-          rightChevronIcon: Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textSecondary,
-            size: 22,
-          ),
-          headerPadding: EdgeInsets.symmetric(vertical: 8),
-        ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          ),
-          weekendStyle: TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        calendarStyle: CalendarStyle(
-          outsideDaysVisible: false,
-          selectedDecoration: const BoxDecoration(
-            color: AppColors.primaryBlue,
-            shape: BoxShape.circle,
-          ),
-          todayDecoration: BoxDecoration(
-            color: Colors.transparent,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primaryBlue, width: 1.5),
-          ),
-          todayTextStyle: const TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primaryBlue,
-          ),
-          selectedTextStyle: const TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          defaultTextStyle: const TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 13,
-            color: AppColors.textPrimary,
-          ),
-          weekendTextStyle: const TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 13,
-            color: AppColors.textPrimary,
-          ),
-          outsideTextStyle: const TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 13,
-            color: AppColors.textHint,
-          ),
-          cellMargin: const EdgeInsets.all(4),
-        ),
-      ),
-    );
-  }
-}
-
-// ── 일정 리스트 ───────────────────────────────────────────────
-
-class _SessionList extends StatelessWidget {
-  final DateTime date;
-  final List<_ScheduleItem> items;
-
-  const _SessionList({required this.date, required this.items});
-
-  static const _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-
-  String _formatDate(DateTime d) =>
-      '${d.month}월 ${d.day}일 (${_weekdays[d.weekday - 1]})';
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        // 날짜 헤더
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              children: [
-                Text(_formatDate(date), style: AppTypography.sectionHeader),
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${items.length}건',
-                    style: const TextStyle(
-                      fontFamily: 'Pretendard',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // 빈 상태
-        if (items.isEmpty)
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: _EmptyState(),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _SessionCard(item: items[i]),
-                ),
-                childCount: items.length,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.calendar_today_outlined,
-            size: 40, color: AppColors.textHint),
-        SizedBox(height: 12),
-        Text(
-          '이 날은 상담 일정이 없습니다.',
-          style: TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 14,
-            color: AppColors.textHint,
-          ),
-        ),
-        SizedBox(height: 80),
-      ],
-    );
-  }
-}
-
-// ── 상담 카드 ─────────────────────────────────────────────────
-
-class _SessionCard extends StatelessWidget {
-  final _ScheduleItem item;
-
-  const _SessionCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _typeColor(item.type);
-    return Container(
-      height: 68,
-      decoration: BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 0.5),
-      ),
-      child: Row(
-        children: [
-          // 좌측 유형별 컬러 세로선
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // 시간 + 유형
-          SizedBox(
-            width: 56,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.time,
-                  style: TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.type,
-                  style: const TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-
-          // 구분선
-          Container(width: 1, height: 36, color: AppColors.border),
-          const SizedBox(width: 14),
-
-          // 내담자명
-          Expanded(
-            child: Text(
-              item.clientName,
-              style: AppTypography.sectionHeader,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-
-          // RiskChip
-          RiskChip(level: item.risk),
-          const SizedBox(width: 14),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 상담 일정 추가 시트 ────────────────────────────────────────
-
-class _AddScheduleSheet extends StatefulWidget {
-  final DateTime initialDate;
-  const _AddScheduleSheet({required this.initialDate});
-
-  @override
-  State<_AddScheduleSheet> createState() => _AddScheduleSheetState();
-}
-
-class _AddScheduleSheetState extends State<_AddScheduleSheet> {
-  String? _selectedClient;
-  late DateTime _selectedDate;
-  TimeOfDay? _selectedTime;
-  String? _selectedType;
-  String? _selectedMethod;
-  final _locationCtrl = TextEditingController();
-  bool _submitted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDate = widget.initialDate;
-  }
-
-  @override
-  void dispose() {
-    _locationCtrl.dispose();
-    super.dispose();
-  }
-
-  String _fmtDate(DateTime d) =>
-      '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
-
-  String _fmtTime(TimeOfDay t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2027),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.primaryBlue),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _selectedDate = picked);
-  }
-
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? const TimeOfDay(hour: 10, minute: 0),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.primaryBlue),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _selectedTime = picked);
-  }
-
-  bool get _isValid =>
-      _selectedClient != null &&
-      _selectedTime != null &&
-      _selectedType != null &&
-      _selectedMethod != null;
-
-  void _submit() {
-    setState(() => _submitted = true);
-    if (!_isValid) return;
-    Navigator.of(context).pop();
-    // TODO: 실제 저장 로직
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottom),
+      body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 핸들
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 16),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-
-            const Text('상담 일정 추가', style: AppTypography.title),
-            const SizedBox(height: 20),
-
-            // ── 내담자 선택 ──────────────────────────────────
-            const _Label('내담자', required: true),
-            const SizedBox(height: 6),
-            _ClientDropdown(
-              value: _selectedClient,
-              onChanged: (v) => setState(() => _selectedClient = v),
-              error: _submitted && _selectedClient == null
-                  ? '내담자를 선택해주세요'
-                  : null,
-            ),
-            const SizedBox(height: 16),
-
-            // ── 날짜 / 시간 ──────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // 캘린더 섹션
+            Container(
+              color: AppColors.backgroundWhite,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // 월 네비게이션
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const _Label('날짜', required: true),
-                      const SizedBox(height: 6),
-                      _TapField(
-                        text: _fmtDate(_selectedDate),
-                        icon: Icons.calendar_today_outlined,
-                        onTap: _pickDate,
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left, size: 22),
+                        onPressed: () => setState(() {
+                          _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+                        }),
+                        color: AppColors.textSecondary,
+                      ),
+                      Text(
+                        '${_focusedMonth.year}년 ${_focusedMonth.month}월',
+                        style: AppTypography.h4,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right, size: 22),
+                        onPressed: () => setState(() {
+                          _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+                        }),
+                        color: AppColors.textSecondary,
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _Label('시간', required: true),
-                      const SizedBox(height: 6),
-                      _TapField(
-                        text: _selectedTime != null
-                            ? _fmtTime(_selectedTime!)
-                            : null,
-                        hint: '시간 선택',
-                        icon: Icons.access_time_outlined,
-                        onTap: _pickTime,
-                        error: _submitted && _selectedTime == null,
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  // 요일 헤더
+                  Row(
+                    children: ['일', '월', '화', '수', '목', '금', '토']
+                        .asMap()
+                        .entries
+                        .map((e) => Expanded(
+                              child: Text(
+                                e.value,
+                                textAlign: TextAlign.center,
+                                style: AppTypography.caption.copyWith(
+                                  color: e.key == 0
+                                      ? AppColors.danger
+                                      : e.key == 6
+                                          ? AppColors.chipScheduledFg
+                                          : AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ))
+                        .toList(),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // ── 상담 유형 ────────────────────────────────────
-            const _Label('상담 유형', required: true),
-            const SizedBox(height: 8),
-            _ChipSelector(
-              options: _sessionTypeLabels,
-              selected: _selectedType,
-              onSelected: (v) => setState(() => _selectedType = v),
-              error: _submitted && _selectedType == null,
-            ),
-            const SizedBox(height: 16),
-
-            // ── 상담 방법 ────────────────────────────────────
-            const _Label('상담 방법', required: true),
-            const SizedBox(height: 8),
-            _ChipSelector(
-              options: _sessionMethods,
-              selected: _selectedMethod,
-              onSelected: (v) => setState(() => _selectedMethod = v),
-              error: _submitted && _selectedMethod == null,
-            ),
-            const SizedBox(height: 16),
-
-            // ── 장소 ─────────────────────────────────────────
-            const _Label('장소'),
-            const SizedBox(height: 6),
-            AppTextField(
-              controller: _locationCtrl,
-              hint: '상담 장소를 입력하세요 (선택)',
-              prefixIcon: const Icon(
-                Icons.location_on_outlined,
-                size: 18,
-                color: AppColors.textSecondary,
+                  const SizedBox(height: 8),
+                  // 달력 그리드
+                  _buildCalendarGrid(),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            PrimaryButton(label: '일정 추가', onPressed: _submit),
+            // 오늘의 일정 카드
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_selectedDay.month}월 ${_selectedDay.day}일(${_weekdayStr(_selectedDay)})',
+                    style: AppTypography.sectionHeader,
+                  ),
+                  const SizedBox(height: 10),
+                  ..._todaySchedules.map((s) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ScheduleDetailPage()),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.backgroundWhite,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.border, width: 1),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 3,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${s['name']} · ${s['topic']}',
+                                        style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        s['time']!,
+                                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right, color: AppColors.textHint, size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
 
-// ── 시트 내부 공용 위젯 ───────────────────────────────────────
+  Widget _buildCalendarGrid() {
+    final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final lastDay = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
+    final startWeekday = firstDay.weekday % 7; // 0=Sun, 1=Mon..6=Sat
+    final totalCells = startWeekday + lastDay.day;
+    final rows = (totalCells / 7).ceil();
 
-class _Label extends StatelessWidget {
-  final String text;
-  final bool required;
-  const _Label(this.text, {this.required = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(text, style: AppTypography.sectionHeader),
-        if (required)
-          const Text(
-            ' *',
-            style: TextStyle(
-              fontFamily: 'Pretendard',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.red,
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _TapField extends StatelessWidget {
-  final String? text;
-  final String? hint;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool error;
-
-  const _TapField({
-    this.text,
-    this.hint,
-    required this.icon,
-    required this.onTap,
-    this.error = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final hasValue = text != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: AppColors.inputBackground,
-          borderRadius: BorderRadius.circular(8),
-          border: error
-              ? Border.all(color: AppColors.red, width: 1)
-              : null,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                hasValue ? text! : (hint ?? ''),
-                style: AppTypography.body.copyWith(
-                  color: hasValue
-                      ? AppColors.textPrimary
-                      : AppColors.textHint,
-                ),
-              ),
-            ),
-            Icon(icon, size: 18, color: AppColors.textSecondary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ClientDropdown extends StatelessWidget {
-  final String? value;
-  final ValueChanged<String?> onChanged;
-  final String? error;
-
-  const _ClientDropdown({
-    required this.value,
-    required this.onChanged,
-    this.error,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: AppColors.inputBackground,
-            borderRadius: BorderRadius.circular(8),
-            border: error != null
-                ? Border.all(color: AppColors.red, width: 1)
-                : null,
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              hint: Text(
-                '내담자를 선택하세요',
-                style: AppTypography.body.copyWith(color: AppColors.textHint),
-              ),
-              style: AppTypography.body,
-              icon: const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: AppColors.textSecondary,
-              ),
-              items: _sampleClients
-                  .map(
-                    (c) => DropdownMenuItem(
-                      value: c,
-                      child: Text(c, style: AppTypography.body),
-                    ),
-                  )
-                  .toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-        if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Text(
-              error!,
-              style: const TextStyle(
-                fontFamily: 'Pretendard',
-                fontSize: 12,
-                color: AppColors.red,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
+      children: List.generate(rows, (row) {
+        return Row(
+          children: List.generate(7, (col) {
+            final cellIndex = row * 7 + col;
+            final dayNum = cellIndex - startWeekday + 1;
 
-class _ChipSelector extends StatelessWidget {
-  final List<String> options;
-  final String? selected;
-  final ValueChanged<String> onSelected;
-  final bool error;
+            if (dayNum < 1 || dayNum > lastDay.day) {
+              return const Expanded(child: SizedBox(height: 40));
+            }
 
-  const _ChipSelector({
-    required this.options,
-    required this.selected,
-    required this.onSelected,
-    this.error = false,
-  });
+            final date = DateTime(_focusedMonth.year, _focusedMonth.month, dayNum);
+            final isToday = date.year == 2026 && date.month == 5 && date.day == 14;
+            final isSelected = date.year == _selectedDay.year &&
+                date.month == _selectedDay.month &&
+                date.day == _selectedDay.day;
+            final hasSchedule = _scheduledDays.contains(dayNum);
+            final isSun = col == 0;
+            final isSat = col == 6;
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((opt) {
-            final isSelected = selected == opt;
-            return GestureDetector(
-              onTap: () => onSelected(opt),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 120),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primaryBlue.withOpacity(0.1)
-                      : AppColors.inputBackground,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.primaryBlue
-                        : Colors.transparent,
-                    width: 1.5,
-                  ),
-                ),
-                child: Text(
-                  opt,
-                  style: TextStyle(
-                    fontFamily: 'Pretendard',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected
-                        ? AppColors.primaryBlue
-                        : AppColors.textSecondary,
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedDay = date),
+                child: Container(
+                  height: 44,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: isSelected || isToday ? AppColors.primary : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$dayNum',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: (isSelected || isToday)
+                                  ? AppColors.white
+                                  : isSun
+                                      ? AppColors.danger
+                                      : isSat
+                                          ? AppColors.chipScheduledFg
+                                          : AppColors.textPrimary,
+                              fontWeight: isToday || isSelected ? FontWeight.w700 : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (hasSchedule)
+                        Container(
+                          width: 4,
+                          height: 4,
+                          margin: const EdgeInsets.only(top: 2),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
             );
-          }).toList(),
-        ),
-        if (error)
-          const Padding(
-            padding: EdgeInsets.only(top: 4, left: 4),
-            child: Text(
-              '항목을 선택해주세요',
-              style: TextStyle(
-                fontFamily: 'Pretendard',
-                fontSize: 12,
-                color: AppColors.red,
-              ),
-            ),
-          ),
-      ],
+          }),
+        );
+      }),
     );
+  }
+
+  String _weekdayStr(DateTime date) {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    return days[date.weekday % 7];
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
 
 class AppTextField extends StatelessWidget {
@@ -40,7 +41,7 @@ class AppTextField extends StatelessWidget {
       children: [
         if (label != null) ...[
           Text(label!, style: AppTypography.sectionHeader),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs + 2),
         ],
         SizedBox(
           height: maxLines == 1 ? 44 : null,
@@ -61,26 +62,29 @@ class AppTextField extends StatelessWidget {
               filled: true,
               fillColor: AppColors.inputBackground,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide:
+                    const BorderSide(color: AppColors.primary, width: 1.5),
               ),
               errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.red, width: 1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide:
+                    const BorderSide(color: AppColors.danger, width: 1),
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
               ),
-              hintStyle: AppTypography.body.copyWith(color: AppColors.textHint),
+              hintStyle:
+                  AppTypography.body.copyWith(color: AppColors.textHint),
             ),
           ),
         ),

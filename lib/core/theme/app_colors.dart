@@ -3,38 +3,90 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary palette
-  static const Color primaryBlue = Color(0xFF378ADD);
-  static const Color teal = Color(0xFF1D9E75);
-  static const Color amber = Color(0xFFEF9F27);
-  static const Color red = Color(0xFFE24B4A);
-  static const Color purple = Color(0xFF7F77DD);
+  // ── Primary palette (Brand · Mint/Teal) ──────────────────────────────────
+  static const Color primary = Color(0xFF3B9A91); // primary/600
+  static const Color primaryForeground = Color(0xFFFFFFFF);
+  static const Color primaryDark = Color(0xFF2E7D78); // primary/700
+  static const Color primaryLight = Color(0xFFD8EFED); // primary/100
+  static const Color primary50 = Color(0xFFEFF8F7);
+  static const Color primary200 = Color(0xFFB0DFDD);
+  static const Color primary300 = Color(0xFF8ED4CF);
+  static const Color primary400 = Color(0xFF6FC6BE);
+  static const Color primary500 = Color(0xFF4FB4AB);
 
-  // Background
-  static const Color backgroundGrey = Color(0xFFF8F9FA);
-  static const Color backgroundWhite = Color(0xFFFFFFFF);
+  // ── Accent ────────────────────────────────────────────────────────────────
+  static const Color accentNavy = Color(0xFF3A4179);
+  static const Color accentBlue = Color(0xFF4A64E3);
 
-  // Text
-  static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textHint = Color(0xFF9CA3AF);
+  // ── Semantic ──────────────────────────────────────────────────────────────
+  static const Color danger = Color(0xFFF26F73); // semantic/danger
+  static const Color success = Color(0xFF5ABC64); // semantic/success
+  static const Color warning = Color(0xFFFBBC05); // semantic/warning
+  static const Color info = Color(0xFF3B82F6); // semantic/info
 
-  // Border
-  static const Color border = Color(0x14000000); // rgba(0,0,0,0.08)
+  /// 기존 코드와의 호환성 유지
+  static const Color red = danger;
+  static const Color purple = accentNavy;
+  static const Color amber = warning;
 
-  // Input background
-  static const Color inputBackground = Color(0xFFF3F4F6);
+  // ── Background & Surface ──────────────────────────────────────────────────
+  static const Color backgroundGrey = Color(0xFFF9F8EF); // bg/app — 따뜻한 크림
+  static const Color backgroundWhite = Color(0xFFFFFFFF); // bg/card
+  static const Color backgroundSubtle = Color(0xFFF5F5F2); // bg/subtle
+  static const Color inputBackground = backgroundSubtle;
 
-  // Risk chip
-  static const Color riskHighBg = Color(0xFFFFEBEB);
-  static const Color riskHighText = Color(0xFFA32D2D);
-  static const Color riskMediumBg = Color(0xFFFFF8E8);
-  static const Color riskMediumText = Color(0xFFB07A1A);
-  static const Color riskLowBg = Color(0xFFE8F5F0);
-  static const Color riskLowText = Color(0xFF1D9E75);
+  // ── Neutral / Grayscale ───────────────────────────────────────────────────
+  static const Color neutral0 = Color(0xFFFFFFFF);
+  static const Color neutral50 = Color(0xFFF9F9F9);
+  static const Color neutral100 = Color(0xFFF3F3F3);
+  static const Color neutral200 = Color(0xFFE5E5E5);
+  static const Color neutral300 = Color(0xFFD3D3D3);
+  static const Color neutral400 = Color(0xFFA8A8A8);
+  static const Color neutral500 = Color(0xFF7F7F7F);
+  static const Color neutral600 = Color(0xFF606060);
+  static const Color neutral700 = Color(0xFF444444);
+  static const Color neutral800 = Color(0xFF2B2B2B);
+  static const Color neutral900 = Color(0xFF141414);
 
-  // Navigation
-  static const Color navActive = primaryBlue;
-  static const Color navInactive = Color(0xFF9CA3AF);
-  static const Color navBadge = red;
+  // ── Text ──────────────────────────────────────────────────────────────────
+  static const Color textPrimary = neutral800; // #2B2B2B
+  static const Color textMedium = neutral700; // #444444
+  static const Color textSecondary = neutral600; // #606060
+  static const Color textHint = neutral400; // #A8A8A8
+
+  // ── Border ────────────────────────────────────────────────────────────────
+  static const Color border = neutral200; // #E5E5E5
+
+  // ── Status Chips ──────────────────────────────────────────────────────────
+  static const Color chipScheduledBg = Color(0xFFE3F2FD);
+  static const Color chipScheduledFg = Color(0xFF1D6BC6);
+  static const Color chipDoneBg = Color(0xFFE2F2E8);
+  static const Color chipDoneFg = Color(0xFF2E8D57);
+  static const Color chipCancelBg = Color(0xFFFDE3E3);
+  static const Color chipCancelFg = Color(0xFFD83838);
+
+  // ── Risk Chips (시멘틱 색상 재사용) ──────────────────────────────────────
+  static const Color riskHighBg = Color(0xFFFFE5E5);
+  static const Color riskHighText = Color(0xFFD83838);
+  static const Color riskMediumBg = Color(0xFFFFF8E0);
+  static const Color riskMediumText = Color(0xFFB08800);
+  static const Color riskLowBg = primaryLight;
+  static const Color riskLowText = primaryDark;
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  static const Color navActive = primary;
+  static const Color navInactive = neutral400;
+  static const Color navBadge = danger;
+
+  // ── Dark theme ────────────────────────────────────────────────────────────
+  static const Color darkBackground = Color(0xFF111111);
+  static const Color darkForeground = Color(0xFFFFFFFF);
+  static const Color darkCard = Color(0xFF1A1A1A);
+  static const Color darkSurface = Color(0xFF2E2E2E);
+  static const Color darkMutedForeground = Color(0xFFB8B9B6);
+  static const Color darkDestructive = Color(0xFFFF5C33);
+
+  // ── Primitive ─────────────────────────────────────────────────────────────
+  static const Color black = Color(0xFF000000);
+  static const Color white = Color(0xFFFFFFFF);
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_spacing.dart';
 
 class SectionCard extends StatelessWidget {
   final Widget child;
@@ -17,11 +18,11 @@ class SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final container = Container(
       width: double.infinity,
-      padding: padding ?? const EdgeInsets.all(16),
+      padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.backgroundWhite,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 0.5),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: child,
     );

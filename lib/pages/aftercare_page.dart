@@ -21,9 +21,9 @@ extension _StatusX on _AftercareStatus {
   Color get lineColor {
     switch (this) {
       case _AftercareStatus.completed:
-        return AppColors.teal;
+        return AppColors.primaryDark;
       case _AftercareStatus.scheduled:
-        return AppColors.primaryBlue;
+        return AppColors.primary;
       case _AftercareStatus.missed:
         return AppColors.textHint;
     }
@@ -32,9 +32,9 @@ extension _StatusX on _AftercareStatus {
   Color get badgeBg {
     switch (this) {
       case _AftercareStatus.completed:
-        return AppColors.teal.withOpacity(0.1);
+        return AppColors.primaryDark.withOpacity(0.1);
       case _AftercareStatus.scheduled:
-        return AppColors.primaryBlue.withOpacity(0.1);
+        return AppColors.primary.withOpacity(0.1);
       case _AftercareStatus.missed:
         return AppColors.inputBackground;
     }
@@ -43,9 +43,9 @@ extension _StatusX on _AftercareStatus {
   Color get badgeFg {
     switch (this) {
       case _AftercareStatus.completed:
-        return AppColors.teal;
+        return AppColors.primaryDark;
       case _AftercareStatus.scheduled:
-        return AppColors.primaryBlue;
+        return AppColors.primary;
       case _AftercareStatus.missed:
         return AppColors.textSecondary;
     }
@@ -163,7 +163,7 @@ class _AftercarePageState extends State<AftercarePage> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSheet,
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 2,
         icon: const Icon(Icons.add, size: 20),
@@ -449,7 +449,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
       lastDate: DateTime(2027),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.primaryBlue),
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -513,7 +513,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
                 ),
               ),
             ),
-            const Text('사후관리 기록 추가', style: AppTypography.title),
+            Text('사후관리 기록 추가', style: AppTypography.title),
             const SizedBox(height: 20),
 
             // 날짜
@@ -571,7 +571,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
             _ChipSelector(
               options: _contactMethods,
               selected: _selectedMethod,
-              color: AppColors.primaryBlue,
+              color: AppColors.primary,
               onSelected: (v) =>
                   setState(() => _selectedMethod = _selectedMethod == v ? null : v),
             ),
@@ -583,7 +583,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
             _ChipSelector(
               options: _statusLabels,
               selected: _selectedStatusLabel,
-              color: AppColors.teal,
+              color: AppColors.primaryDark,
               onSelected: (v) => setState(() => _selectedStatusLabel = v),
               error: _submitted && _selectedStatusLabel == null,
             ),
@@ -626,7 +626,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
               child: ElevatedButton(
                 onPressed: _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(

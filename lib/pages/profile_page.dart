@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
-import '../widgets/section_card.dart';
-import 'invite_code_page.dart';
-import 'org_stats_page.dart';
-import 'worker_manage_page.dart';
+import 'notification_page.dart';
 import 'privacy_settings_page.dart';
+import 'profile_edit_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -13,176 +12,142 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('프로필')),
+      backgroundColor: AppColors.backgroundGrey,
+      appBar: AppBar(
+        backgroundColor: AppColors.backgroundWhite,
+        scrolledUnderElevation: 0,
+        title: Text('마이페이지', style: AppTypography.h3),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationPage()),
+            ),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _ProfileHeader(),
-            const SizedBox(height: 24),
-            _StatsRow(),
-            const SizedBox(height: 24),
-            const Text('설정', style: AppTypography.sectionHeader),
-            const SizedBox(height: 12),
-            const SectionCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _SettingRow(icon: Icons.notifications_outlined, label: '알림 설정'),
-                  Divider(height: 1),
-                  _SettingRow(icon: Icons.lock_outline, label: '보안 및 개인정보'),
-                  Divider(height: 1),
-                  _SettingRow(icon: Icons.smart_toy_outlined, label: 'AI 분석 설정', iconColor: AppColors.purple),
-                  Divider(height: 1),
-                  _SettingRow(icon: Icons.palette_outlined, label: '화면 설정'),
-                  Divider(height: 1),
-                  _SettingRow(icon: Icons.help_outline, label: '도움말 및 지원'),
-                ],
+            // 프로필 카드
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary300,
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            const SizedBox(height: 24),
-            const Text('관리자', style: AppTypography.sectionHeader),
-            const SizedBox(height: 12),
-            SectionCard(
-              padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _SettingRow(
-                    icon: Icons.key_outlined,
-                    label: '초대코드 관리',
-                    iconColor: AppColors.teal,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const InviteCodePage()),
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '이',
+                        style: AppTypography.h2.copyWith(color: AppColors.white),
+                      ),
                     ),
                   ),
-                  const Divider(height: 1),
-                  _SettingRow(
-                    icon: Icons.bar_chart_outlined,
-                    label: '기관 통계',
-                    iconColor: AppColors.primaryBlue,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const OrgStatsPage()),
-                    ),
+                  const SizedBox(height: 10),
+                  Text('이복사', style: AppTypography.h3.copyWith(color: AppColors.white, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'kyle.kangwon@gmail.com',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.white.withOpacity(0.9)),
                   ),
-                  const Divider(height: 1),
-                  _SettingRow(
-                    icon: Icons.people_outline,
-                    label: '사회복지사 관리',
-                    iconColor: AppColors.purple,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const WorkerManagePage()),
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  _SettingRow(
-                    icon: Icons.visibility_outlined,
-                    label: '공개 항목 설정',
-                    iconColor: AppColors.amber,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const PrivacySettingsPage()),
-                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '강원대 3년 · 상담원',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.white.withOpacity(0.8)),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            const Text('계정', style: AppTypography.sectionHeader),
             const SizedBox(height: 12),
-            const SectionCard(
-              padding: EdgeInsets.zero,
-              child: Column(
+            // 통계 바
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.backgroundWhite,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border, width: 1),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
                 children: [
-                  _SettingRow(icon: Icons.sync_outlined, label: '데이터 동기화'),
-                  Divider(height: 1),
-                  _SettingRow(
-                    icon: Icons.logout,
-                    label: '로그아웃',
-                    labelColor: AppColors.red,
-                    iconColor: AppColors.red,
-                    showChevron: false,
-                  ),
+                  Expanded(child: _StatItem(label: '내담자', value: '47')),
+                  Container(width: 1, height: 36, color: AppColors.border),
+                  Expanded(child: _StatItem(label: '이번주 상담', value: '128')),
+                  Container(width: 1, height: 36, color: AppColors.border),
+                  Expanded(child: _StatItem(label: '주사례', value: '12')),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'v1.0.0 · Multimodal Counsel Client',
-              style: AppTypography.caption.copyWith(color: AppColors.textHint),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: AppColors.primaryBlue.withOpacity(0.15),
-            child: const Text(
-              '김',
-              style: TextStyle(
-                fontFamily: 'Pretendard',
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryBlue,
+            // 메뉴 리스트
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.backgroundWhite,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border, width: 1),
+              ),
+              child: Column(
+                children: [
+                  _MenuItem(
+                    icon: Icons.person_outline,
+                    title: '프로필 수정',
+                    subtitle: '이름, 연락처, 자기소개',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProfileEditPage()),
+                    ),
+                  ),
+                  const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                  _MenuItem(
+                    icon: Icons.lock_outline,
+                    title: '비밀번호 변경',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PrivacySettingsPage()),
+                    ),
+                  ),
+                  const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                  _MenuItem(
+                    icon: Icons.calendar_today_outlined,
+                    title: '알림 설정',
+                    subtitle: '상담 알림, 게시판 알림',
+                    onTap: () {},
+                  ),
+                  const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                  _MenuItem(
+                    icon: Icons.bar_chart,
+                    title: '나의 상담 통계',
+                    subtitle: '월별 상담, 주사례',
+                    onTap: () {},
+                  ),
+                  const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                  _MenuItem(
+                    icon: Icons.settings_outlined,
+                    title: '환경 설정',
+                    subtitle: '테마, 글자 크기, 언어',
+                    onTap: () {},
+                  ),
+                  const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
+                  _MenuItem(
+                    icon: Icons.help_outline,
+                    title: '도움말',
+                    subtitle: 'FAQ',
+                    onTap: () {},
+                    isLast: true,
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('김상담사', style: AppTypography.title),
-                const SizedBox(height: 4),
-                Text(
-                  '임상심리사 1급',
-                  style: AppTypography.body.copyWith(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'counselor@hospital.kr',
-                  style: AppTypography.caption,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
-            onPressed: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatsRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          const _StatItem(label: '담당 내담자', value: '24'),
-          _Divider(),
-          const _StatItem(label: '총 세션', value: '312'),
-          _Divider(),
-          const _StatItem(label: '이번 달', value: '28'),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -198,71 +163,51 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontFamily: 'Pretendard',
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: AppTypography.caption),
+        Text(value, style: AppTypography.h3.copyWith(color: AppColors.primary)),
+        const SizedBox(height: 2),
+        Text(label, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
       ],
     );
   }
 }
 
-class _Divider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: 1, height: 32, color: AppColors.border);
-  }
-}
-
-class _SettingRow extends StatelessWidget {
+class _MenuItem extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final Color? iconColor;
-  final Color? labelColor;
-  final bool showChevron;
-  final VoidCallback? onTap;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool isLast;
 
-  const _SettingRow({
+  const _MenuItem({
     required this.icon,
-    required this.label,
-    this.iconColor,
-    this.labelColor,
-    this.showChevron = true,
-    this.onTap,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+    this.isLast = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Icon(icon, color: iconColor ?? AppColors.textSecondary, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.body.copyWith(
-                    color: labelColor ?? AppColors.textPrimary,
-                  ),
-                ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textSecondary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500)),
+                  if (subtitle != null)
+                    Text(subtitle!, style: AppTypography.caption.copyWith(color: AppColors.textHint)),
+                ],
               ),
-              if (showChevron)
-                const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textHint, size: 20),
+          ],
         ),
       ),
     );

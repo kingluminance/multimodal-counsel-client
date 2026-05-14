@@ -131,14 +131,14 @@ class _SessionDetailPageState extends State<SessionDetailPage>
               padding: EdgeInsets.only(right: 16),
               child: Row(
                 children: [
-                  Icon(Icons.lock_outline, size: 16, color: AppColors.teal),
+                  Icon(Icons.lock_outline, size: 16, color: AppColors.primaryDark),
                   SizedBox(width: 4),
                   Text(
                     '확정',
                     style: TextStyle(
                       fontFamily: 'Pretendard',
                       fontSize: 13,
-                      color: AppColors.teal,
+                      color: AppColors.primaryDark,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -162,9 +162,9 @@ class _SessionDetailPageState extends State<SessionDetailPage>
             child: TabBar(
               controller: _tabController,
               isScrollable: false,
-              labelColor: AppColors.primaryBlue,
+              labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textSecondary,
-              indicatorColor: AppColors.primaryBlue,
+              indicatorColor: AppColors.primary,
               indicatorWeight: 2,
               labelStyle: const TextStyle(
                 fontFamily: 'Pretendard', fontSize: 13, fontWeight: FontWeight.w600,
@@ -380,7 +380,7 @@ class _SaveButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: onSave,
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: AppColors.primaryBlue),
+            side: const BorderSide(color: AppColors.primary),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: const Text(
@@ -389,7 +389,7 @@ class _SaveButton extends StatelessWidget {
               fontFamily: 'Pretendard',
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.primaryBlue,
+              color: AppColors.primary,
             ),
           ),
         ),
@@ -419,7 +419,7 @@ class _TopicTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _AiDraftBanner(content: _aiTopicDraft),
-          const Text('상담 주제', style: AppTypography.sectionHeader),
+          Text('상담 주제', style: AppTypography.sectionHeader),
           const SizedBox(height: 8),
           SectionCard(
             padding: const EdgeInsets.all(12),
@@ -438,7 +438,7 @@ class _TopicTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text('추가 메모', style: AppTypography.sectionHeader),
+          Text('추가 메모', style: AppTypography.sectionHeader),
           const SizedBox(height: 8),
           SectionCard(
             padding: const EdgeInsets.all(12),
@@ -489,7 +489,7 @@ class _RiskTab extends StatelessWidget {
       case RiskLevel.medium:
         return AppColors.amber;
       case RiskLevel.low:
-        return AppColors.teal;
+        return AppColors.primaryDark;
     }
   }
 
@@ -502,7 +502,7 @@ class _RiskTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 위험수준
-          const Text('위험수준', style: AppTypography.sectionHeader),
+          Text('위험수준', style: AppTypography.sectionHeader),
           const SizedBox(height: 10),
           SectionCard(
             child: Column(
@@ -519,7 +519,7 @@ class _RiskTab extends StatelessWidget {
                     ),
                     ButtonSegment(
                       value: RiskLevel.low,
-                      label: Text('저', style: TextStyle(color: riskLevel == RiskLevel.low ? Colors.white : AppColors.teal)),
+                      label: Text('저', style: TextStyle(color: riskLevel == RiskLevel.low ? Colors.white : AppColors.primaryDark)),
                     ),
                   ],
                   selected: {riskLevel},
@@ -538,7 +538,7 @@ class _RiskTab extends StatelessWidget {
           const SizedBox(height: 16),
 
           // 위험유형
-          const Text('위험유형', style: AppTypography.sectionHeader),
+          Text('위험유형', style: AppTypography.sectionHeader),
           const SizedBox(height: 10),
           SectionCard(
             child: Wrap(
@@ -597,7 +597,7 @@ class _RiskTab extends StatelessWidget {
             ),
 
           // 위험 메모
-          const Text('위험 특이사항', style: AppTypography.sectionHeader),
+          Text('위험 특이사항', style: AppTypography.sectionHeader),
           const SizedBox(height: 8),
           SectionCard(
             padding: const EdgeInsets.all(12),
@@ -641,8 +641,8 @@ class _NeedTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!readOnly)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               '우선순위를 드래그하여 정렬하세요.',
               style: AppTypography.caption,
@@ -706,7 +706,7 @@ class _NeedItemCardState extends State<_NeedItemCard> {
               height: 24,
               decoration: BoxDecoration(
                 color: widget.item.enabled
-                    ? AppColors.primaryBlue
+                    ? AppColors.primary
                     : AppColors.inputBackground,
                 shape: BoxShape.circle,
               ),
@@ -743,7 +743,7 @@ class _NeedItemCardState extends State<_NeedItemCard> {
               Switch(
                 value: widget.item.enabled,
                 onChanged: (v) => setState(() => widget.item.enabled = v),
-                activeColor: AppColors.primaryBlue,
+                activeColor: AppColors.primary,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
           ],
@@ -769,7 +769,7 @@ class _InterventionTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _AiDraftBanner(content: _aiInterventionDraft),
-          const Text('개입 내용', style: AppTypography.sectionHeader),
+          Text('개입 내용', style: AppTypography.sectionHeader),
           const SizedBox(height: 8),
           SectionCard(
             padding: const EdgeInsets.all(12),
@@ -810,7 +810,7 @@ class _PlanTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _AiDraftBanner(content: _aiPlanDraft),
-          const Text('다음 계획', style: AppTypography.sectionHeader),
+          Text('다음 계획', style: AppTypography.sectionHeader),
           const SizedBox(height: 8),
           SectionCard(
             padding: const EdgeInsets.all(12),
@@ -897,13 +897,13 @@ class _BottomActionBar extends StatelessWidget {
               width: double.infinity,
               height: 48,
               decoration: BoxDecoration(
-                color: AppColors.teal.withOpacity(0.1),
+                color: AppColors.primaryDark.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.lock_outline, size: 18, color: AppColors.teal),
+                  Icon(Icons.lock_outline, size: 18, color: AppColors.primaryDark),
                   SizedBox(width: 8),
                   Text(
                     '확정 완료',
@@ -911,7 +911,7 @@ class _BottomActionBar extends StatelessWidget {
                       fontFamily: 'Pretendard',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.teal,
+                      color: AppColors.primaryDark,
                     ),
                   ),
                 ],
@@ -1008,7 +1008,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               '서명 후 내용을 수정할 수 없습니다.',
               style: AppTypography.caption,
             ),
@@ -1074,7 +1074,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
                       ? () => Navigator.of(context).pop(true)
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -1105,7 +1105,7 @@ class _SigPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.primaryBlue
+      ..color = AppColors.primary
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round

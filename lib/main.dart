@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:multimodal_counsel_client/widgets/main_scaffold.dart';
 import 'core/theme/app_theme.dart';
-import 'pages/login_page.dart';
+import 'pages/splash_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +24,8 @@ class App extends StatelessWidget {
       title: 'DeepCare',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       locale: const Locale('ko'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -32,7 +33,7 @@ class App extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('ko'), Locale('en')],
-      home: const MainScaffold(),
+      home: const SplashPage(),
     );
   }
 }

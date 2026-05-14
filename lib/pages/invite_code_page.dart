@@ -24,7 +24,7 @@ extension _CodeRoleX on _CodeRole {
   Color get color {
     switch (this) {
       case _CodeRole.counselor:
-        return AppColors.primaryBlue;
+        return AppColors.primary;
       case _CodeRole.supervisor:
         return AppColors.purple;
       case _CodeRole.admin:
@@ -35,7 +35,7 @@ extension _CodeRoleX on _CodeRole {
   Color get bgColor {
     switch (this) {
       case _CodeRole.counselor:
-        return AppColors.primaryBlue.withOpacity(0.08);
+        return AppColors.primary.withOpacity(0.08);
       case _CodeRole.supervisor:
         return AppColors.purple.withOpacity(0.08);
       case _CodeRole.admin:
@@ -161,7 +161,7 @@ class _InviteCodePageState extends State<InviteCodePage> {
         backgroundColor: AppColors.backgroundWhite,
         elevation: 0,
         titleSpacing: 16,
-        title: const Text('초대코드 관리', style: AppTypography.title),
+        title: Text('초대코드 관리', style: AppTypography.title),
       ),
       body: _codes.isEmpty
           ? const _EmptyState()
@@ -198,7 +198,7 @@ class _InviteCodePageState extends State<InviteCodePage> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showIssueSheet,
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 2,
         icon: const Icon(Icons.add, size: 20),
@@ -310,7 +310,7 @@ class _CodeCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: expired
                       ? AppColors.inputBackground
-                      : AppColors.primaryBlue.withOpacity(0.07),
+                      : AppColors.primary.withOpacity(0.07),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -479,7 +479,7 @@ class _IssueCodeSheetState extends State<_IssueCodeSheet> {
       lastDate: DateTime(2027),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.primaryBlue),
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -521,7 +521,7 @@ class _IssueCodeSheetState extends State<_IssueCodeSheet> {
                 ),
               ),
             ),
-            const Text('초대코드 발급', style: AppTypography.title),
+            Text('초대코드 발급', style: AppTypography.title),
             const SizedBox(height: 20),
 
             // 역할 선택

@@ -46,7 +46,7 @@ class _SignupPageState extends State<SignupPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.primaryBlue,
+                  primary: AppColors.primary,
                 ),
           ),
           child: child!,
@@ -113,7 +113,7 @@ class _SignupPageState extends State<SignupPage> {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 '초대받은 정보를 입력해주세요',
                 style: AppTypography.caption,
               ),
@@ -248,7 +248,7 @@ class _GenderOption extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         height: 44,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryBlue : AppColors.inputBackground,
+          color: isSelected ? AppColors.primary : AppColors.inputBackground,
           borderRadius: BorderRadius.circular(8),
           border: isSelected
               ? null

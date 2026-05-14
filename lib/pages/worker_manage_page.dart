@@ -20,7 +20,7 @@ extension _WorkerRoleX on _WorkerRole {
   Color get color {
     switch (this) {
       case _WorkerRole.counselor:
-        return AppColors.primaryBlue;
+        return AppColors.primary;
       case _WorkerRole.supervisor:
         return AppColors.purple;
     }
@@ -29,7 +29,7 @@ extension _WorkerRoleX on _WorkerRole {
   Color get bgColor {
     switch (this) {
       case _WorkerRole.counselor:
-        return AppColors.primaryBlue.withOpacity(0.08);
+        return AppColors.primary.withOpacity(0.08);
       case _WorkerRole.supervisor:
         return AppColors.purple.withOpacity(0.08);
     }
@@ -159,7 +159,7 @@ class WorkerManagePage extends StatelessWidget {
         backgroundColor: AppColors.backgroundWhite,
         elevation: 0,
         titleSpacing: 16,
-        title: const Text('사회복지사 관리', style: AppTypography.title),
+        title: Text('사회복지사 관리', style: AppTypography.title),
       ),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
@@ -337,7 +337,7 @@ class _WorkerDetailPageState extends State<_WorkerDetailPage> {
           style: const TextStyle(fontFamily: 'Pretendard'),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.primaryDark,
       ),
     );
   }
@@ -415,11 +415,11 @@ class _WorkerDetailPageState extends State<_WorkerDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.supervisor_account_outlined,
+                        const Icon(Icons.supervisor_account_outlined,
                             size: 16, color: AppColors.purple),
-                        SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Text('슈퍼바이저 배정',
                             style: AppTypography.sectionHeader),
                       ],
@@ -484,7 +484,7 @@ class _WorkerDetailPageState extends State<_WorkerDetailPage> {
                         onPressed: _save,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _saved
-                              ? AppColors.teal
+                              ? AppColors.primaryDark
                               : AppColors.purple,
                           foregroundColor: Colors.white,
                           elevation: 0,
@@ -527,7 +527,7 @@ class _WorkerDetailPageState extends State<_WorkerDetailPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue.withOpacity(0.1),
+                          color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -536,7 +536,7 @@ class _WorkerDetailPageState extends State<_WorkerDetailPage> {
                             fontFamily: 'Pretendard',
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.primaryBlue,
+                            color: AppColors.primary,
                           ),
                         ),
                       ),

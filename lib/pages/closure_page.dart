@@ -53,7 +53,7 @@ class _ClosurePageState extends State<ClosurePage> {
       lastDate: DateTime(2027),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: AppColors.teal),
+          colorScheme: const ColorScheme.light(primary: AppColors.primaryDark),
         ),
         child: child!,
       ),
@@ -343,7 +343,7 @@ class _ClosurePageState extends State<ClosurePage> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      _canSubmit ? AppColors.teal : AppColors.teal.withOpacity(0.4),
+                      _canSubmit ? AppColors.primaryDark : AppColors.primaryDark.withOpacity(0.4),
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -371,7 +371,7 @@ class _SummaryCard extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.teal, Color(0xFF168262)],
+          colors: [AppColors.primaryDark, Color(0xFF168262)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -503,11 +503,11 @@ class _ReasonChips extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isOn
-                  ? AppColors.teal.withOpacity(0.09)
+                  ? AppColors.primaryDark.withOpacity(0.09)
                   : AppColors.backgroundWhite,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: isOn ? AppColors.teal : AppColors.border,
+                color: isOn ? AppColors.primaryDark : AppColors.border,
                 width: isOn ? 1.5 : 0.5,
               ),
             ),
@@ -516,7 +516,7 @@ class _ReasonChips extends StatelessWidget {
               children: [
                 if (isOn) ...[
                   const Icon(Icons.check_circle,
-                      size: 14, color: AppColors.teal),
+                      size: 14, color: AppColors.primaryDark),
                   const SizedBox(width: 5),
                 ],
                 Text(
@@ -526,7 +526,7 @@ class _ReasonChips extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: isOn
-                        ? AppColors.teal
+                        ? AppColors.primaryDark
                         : AppColors.textSecondary,
                   ),
                 ),
@@ -636,13 +636,13 @@ class _ConfirmDialog extends StatelessWidget {
                   '$clientName님 케이스가 종결되었습니다.',
                   style: const TextStyle(fontFamily: 'Pretendard'),
                 ),
-                backgroundColor: AppColors.teal,
+                backgroundColor: AppColors.primaryDark,
                 behavior: SnackBarBehavior.floating,
               ),
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.teal,
+            backgroundColor: AppColors.primaryDark,
             foregroundColor: Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(

@@ -111,7 +111,7 @@ class _ConsentGatePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               '생체 측정 기능은 카메라를 통해 혈압·심박·스트레스를 추정합니다.\n기본정보 탭에서 카메라 동의 후 이용해주세요.',
               style: AppTypography.caption,
               textAlign: TextAlign.center,
@@ -303,10 +303,10 @@ class _CameraAnalysisPageState extends State<CameraAnalysisPage> {
                         _MetricCard(
                           label: '심박수',
                           icon: Icons.monitor_heart_outlined,
-                          iconColor: AppColors.primaryBlue,
+                          iconColor: AppColors.primary,
                           value: _data != null ? '${_data!.heartRate}' : '--',
                           unit: 'bpm',
-                          valueColor: AppColors.primaryBlue,
+                          valueColor: AppColors.primary,
                         ),
                         _MetricCard(
                           label: '스트레스',
@@ -374,7 +374,7 @@ class _CameraAnalysisPageState extends State<CameraAnalysisPage> {
     final s = _data?.stress ?? 0;
     if (s > 80) return AppColors.red;
     if (s > 60) return AppColors.amber;
-    return AppColors.teal;
+    return AppColors.primaryDark;
   }
 }
 
@@ -415,7 +415,7 @@ class _HighStressBanner extends StatelessWidget {
 // ── 카메라 뷰포트 ─────────────────────────────────────────────
 
 class _CameraViewport extends StatelessWidget {
-  final CameraController? controller;
+  final dynamic controller;
   final bool isReady;
   final bool isError;
   final String errorMsg;
@@ -435,19 +435,8 @@ class _CameraViewport extends StatelessWidget {
     if (!isReady || controller == null) {
       return const _CameraPlaceholder(message: '카메라 초기화 중...');
     }
-    return ClipRect(
-      child: OverflowBox(
-        alignment: Alignment.center,
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: controller!.value.previewSize?.height ?? 1,
-            height: controller!.value.previewSize?.width ?? 1,
-            child: CameraPreview(controller!),
-          ),
-        ),
-      ),
-    );
+    // Camera preview placeholder (camera package not installed)
+    return const _CameraPlaceholder(message: '카메라 미리보기');
   }
 }
 

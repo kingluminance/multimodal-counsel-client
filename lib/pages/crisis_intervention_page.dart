@@ -387,7 +387,7 @@ class _Checklist extends StatelessWidget {
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.primaryBlue,
+                color: AppColors.primary,
               ),
             );
           } else {
@@ -407,7 +407,7 @@ class _Checklist extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: item.checked
-                            ? AppColors.teal
+                            ? AppColors.primaryDark
                             : AppColors.textPrimary,
                         decoration: item.checked
                             ? TextDecoration.none
@@ -420,7 +420,7 @@ class _Checklist extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.teal.withOpacity(0.1),
+                          color: AppColors.primaryDark.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
@@ -429,7 +429,7 @@ class _Checklist extends StatelessWidget {
                             fontFamily: 'Pretendard',
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.teal,
+                            color: AppColors.primaryDark,
                           ),
                         ),
                       ),
@@ -441,12 +441,12 @@ class _Checklist extends StatelessWidget {
                     ? null
                     : (v) => onChanged(item, v ?? false),
                 checkColor: Colors.white,
-                activeColor: AppColors.teal,
+                activeColor: AppColors.primaryDark,
                 checkboxShape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(4),
                 ),
                 side: BorderSide(
-                  color: item.checked ? AppColors.teal : AppColors.border,
+                  color: item.checked ? AppColors.primaryDark : AppColors.border,
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
@@ -475,14 +475,14 @@ class _NotifiedBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.teal.withOpacity(0.08),
+        color: AppColors.primaryDark.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.teal.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primaryDark.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           const Icon(Icons.check_circle_outline,
-              size: 18, color: AppColors.teal),
+              size: 18, color: AppColors.primaryDark),
           const SizedBox(width: 10),
           Expanded(
             child: Text.rich(
@@ -490,7 +490,7 @@ class _NotifiedBanner extends StatelessWidget {
                 style: const TextStyle(
                   fontFamily: 'Pretendard',
                   fontSize: 13,
-                  color: AppColors.teal,
+                  color: AppColors.primaryDark,
                 ),
                 children: [
                   const TextSpan(text: '슈퍼바이저 '),

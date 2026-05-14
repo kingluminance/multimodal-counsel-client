@@ -198,8 +198,8 @@ class _BpChart extends StatelessWidget {
               minY: 50,
               maxY: 160,
               lineBarsData: [
-                _line(_bpSystolic, AppColors.primaryBlue),
-                _line(_bpDiastolic, AppColors.teal),
+                _line(_bpSystolic, AppColors.primary),
+                _line(_bpDiastolic, AppColors.primaryDark),
                 _line(_heartRate, AppColors.amber, dashed: true),
               ],
               titlesData: FlTitlesData(
@@ -237,8 +237,8 @@ class _BpChart extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         const _Legend(items: [
-          (color: AppColors.primaryBlue, label: '수축기 혈압'),
-          (color: AppColors.teal, label: '이완기 혈압'),
+          (color: AppColors.primary, label: '수축기 혈압'),
+          (color: AppColors.primaryDark, label: '이완기 혈압'),
           (color: AppColors.amber, label: '심박수'),
         ]),
       ],
@@ -279,13 +279,13 @@ class _EmotionChart extends StatelessWidget {
               lineBarsData: [
                 LineChartBarData(
                   spots: _emotionPos.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-                  color: AppColors.teal,
+                  color: AppColors.primaryDark,
                   isCurved: true,
                   barWidth: 2,
                   dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: AppColors.teal.withOpacity(0.15),
+                    color: AppColors.primaryDark.withOpacity(0.15),
                   ),
                 ),
                 LineChartBarData(
@@ -336,7 +336,7 @@ class _EmotionChart extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         const _Legend(items: [
-          (color: AppColors.teal, label: '긍정 감정'),
+          (color: AppColors.primaryDark, label: '긍정 감정'),
           (color: AppColors.red, label: '부정 감정'),
         ]),
       ],
@@ -363,7 +363,7 @@ class _StressChart extends StatelessWidget {
               barRods: [
                 BarChartRodData(
                   toY: e.value,
-                  color: isHigh ? AppColors.red : AppColors.primaryBlue,
+                  color: isHigh ? AppColors.red : AppColors.primary,
                   width: 14,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
@@ -447,7 +447,7 @@ class _GoalDonut extends StatelessWidget {
                 sections: [
                   PieChartSectionData(
                     value: achieved,
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primary,
                     radius: 28,
                     title: '',
                   ),
@@ -474,14 +474,14 @@ class _GoalDonut extends StatelessWidget {
                     fontFamily: 'Pretendard',
                     fontSize: 36,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.primaryBlue,
+                    color: AppColors.primary,
                     height: 1,
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text('목표 달성률', style: AppTypography.caption),
+                Text('목표 달성률', style: AppTypography.caption),
                 const SizedBox(height: 16),
-                const _LegendDot(color: AppColors.primaryBlue, label: '달성'),
+                const _LegendDot(color: AppColors.primary, label: '달성'),
                 const SizedBox(height: 6),
                 const _LegendDot(color: AppColors.inputBackground, label: '미달성'),
               ],
@@ -542,21 +542,21 @@ class _TimelineNode extends StatelessWidget {
               Expanded(
                 child: Container(
                   height: 2,
-                  color: isFirst ? Colors.transparent : AppColors.primaryBlue.withOpacity(0.3),
+                  color: isFirst ? Colors.transparent : AppColors.primary.withOpacity(0.3),
                 ),
               ),
               Container(
                 width: 10,
                 height: 10,
                 decoration: const BoxDecoration(
-                  color: AppColors.primaryBlue,
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
               ),
               Expanded(
                 child: Container(
                   height: 2,
-                  color: isLast ? Colors.transparent : AppColors.primaryBlue.withOpacity(0.3),
+                  color: isLast ? Colors.transparent : AppColors.primary.withOpacity(0.3),
                 ),
               ),
             ],
@@ -569,7 +569,7 @@ class _TimelineNode extends StatelessWidget {
               fontFamily: 'Pretendard',
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: AppColors.primaryBlue,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(height: 4),
@@ -648,17 +648,17 @@ class _RiskCalendar extends StatelessWidget {
       ),
       calendarStyle: CalendarStyle(
         todayDecoration: BoxDecoration(
-          color: AppColors.primaryBlue.withOpacity(0.2),
+          color: AppColors.primary.withOpacity(0.2),
           shape: BoxShape.circle,
         ),
         todayTextStyle: const TextStyle(
           fontFamily: 'Pretendard',
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: AppColors.primaryBlue,
+          color: AppColors.primary,
         ),
         selectedDecoration: const BoxDecoration(
-          color: AppColors.primaryBlue,
+          color: AppColors.primary,
           shape: BoxShape.circle,
         ),
         defaultTextStyle: const TextStyle(

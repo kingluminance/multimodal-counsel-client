@@ -27,9 +27,9 @@ class _TypeStat {
 }
 
 const _typeStats = [
-  _TypeStat('개인 상담', 45, AppColors.primaryBlue),
+  _TypeStat('개인 상담', 45, AppColors.primary),
   _TypeStat('프로그램', 20, AppColors.amber),
-  _TypeStat('가족 상담', 15, AppColors.teal),
+  _TypeStat('가족 상담', 15, AppColors.primaryDark),
   _TypeStat('사례 관리', 12, AppColors.purple),
   _TypeStat('위기 개입', 8, AppColors.red),
 ];
@@ -47,7 +47,7 @@ class OrgStatsPage extends StatelessWidget {
         backgroundColor: AppColors.backgroundWhite,
         elevation: 0,
         titleSpacing: 16,
-        title: const Text('기관 통계', style: AppTypography.title),
+        title: Text('기관 통계', style: AppTypography.title),
         actions: [
           TextButton.icon(
             onPressed: () {},
@@ -121,14 +121,14 @@ class _SummaryGrid extends StatelessWidget {
           value: '85',
           unit: '명',
           icon: Icons.people_outline,
-          color: AppColors.primaryBlue,
+          color: AppColors.primary,
         ),
         _SummaryCard(
           label: '이번 달 상담',
           value: '147',
           unit: '건',
           icon: Icons.chat_bubble_outline,
-          color: AppColors.teal,
+          color: AppColors.primaryDark,
         ),
         _SummaryCard(
           label: '고위험 케이스',
@@ -316,7 +316,7 @@ class _HorizBar extends StatelessWidget {
                 Container(
                   height: 18,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.08),
+                    color: AppColors.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -326,7 +326,7 @@ class _HorizBar extends StatelessWidget {
                   child: Container(
                     height: 18,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -434,7 +434,7 @@ class _RiskDistSection extends StatelessWidget {
     const data = [
       (label: '고위험', count: 12, color: AppColors.red),
       (label: '중위험', count: 28, color: AppColors.amber),
-      (label: '저위험', count: 45, color: AppColors.teal),
+      (label: '저위험', count: 45, color: AppColors.primaryDark),
     ];
 
     return Column(

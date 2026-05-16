@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
-import '../services/services.dart';
+import '../services/api_client.dart';
 import '../widgets/main_scaffold.dart';
-import 'signup_page.dart';
+import 'login_page_web.dart' if (dart.library.io) 'login_page_stub.dart' as web_redirect;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,43 +17,46 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
+  bool _showEmailForm = false;
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   final _storage = const FlutterSecureStorage();
 
-  Future<void> _onOAuthLogin(String provider) async {
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onEmailLogin() async {
     if (_isLoading) return;
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이메일과 비밀번호를 입력하세요.')),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
-      final result = await AuthService().oauthCallback(
-        provider: provider,
-        oauthCode: '',
-        redirectUri: 'deepcare://callback',
-      );
+      final dio = ApiClient().dio;
+      final res = await dio.post('/api/auth/login', data: {
+        'email': email,
+        'password': password,
+      });
+      final data = res.data['data'] as Map<String, dynamic>;
+      await _storage.write(key: 'access_token', value: data['accessToken'] as String);
+      await _storage.write(key: 'refresh_token', value: data['refreshToken'] as String);
+      await _storage.write(key: 'user_id', value: data['userId'].toString());
       if (!mounted) return;
-
-      final status = result['status'] as String?;
-      if (status == 'new_user') {
-        final oauthToken = result['oauth_token'] as String? ?? '';
-        await _storage.write(key: 'oauth_token', value: oauthToken);
-        if (!mounted) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SignupPage()),
-        );
-      } else if (status == 'existing_user') {
-        await ApiClient().saveTokens(
-          accessToken: result['access_token'] as String? ?? '',
-          refreshToken: result['refresh_token'] as String? ?? '',
-        );
-        if (result['user_id'] != null) {
-          await _storage.write(key: 'user_id', value: result['user_id'].toString());
-        }
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainScaffold()),
-        );
-      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainScaffold()),
+      );
     } catch (e) {
       if (!mounted) return;
-      String message = '로그인 중 오류가 발생했습니다.';
+      String message = '로그인에 실패했습니다.';
       if (e is DioException && e.response != null) {
         message = e.response?.data?['message'] as String? ?? message;
       }
@@ -61,6 +65,19 @@ class _LoginPageState extends State<LoginPage> {
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _onOAuthLogin(String provider) {
+    if (_isLoading) return;
+    final oauthUrl = '${ApiClient.baseUrl}/oauth2/authorization/$provider';
+
+    if (kIsWeb) {
+      web_redirect.redirectToOAuth(oauthUrl);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모바일 OAuth는 준비 중입니다.')),
+      );
     }
   }
 
@@ -102,6 +119,46 @@ class _LoginPageState extends State<LoginPage> {
                   padding: EdgeInsets.only(bottom: 24),
                   child: CircularProgressIndicator(),
                 ),
+              // 이메일 로그인 폼
+              if (_showEmailForm) ...[
+                TextField(
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: '이메일',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _passwordCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    hintText: '비밀번호',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _onEmailLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('로그인', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
               _OAuthButton(
                 label: 'Google로 로그인',
                 backgroundColor: Colors.white,
@@ -125,6 +182,14 @@ class _LoginPageState extends State<LoginPage> {
                 foregroundColor: Colors.white,
                 icon: const _NaverIcon(),
                 onTap: _isLoading ? null : () => _onOAuthLogin('naver'),
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () => setState(() => _showEmailForm = !_showEmailForm),
+                child: Text(
+                  _showEmailForm ? 'SNS 로그인으로 돌아가기' : '이메일로 로그인',
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                ),
               ),
               const Spacer(flex: 1),
             ],

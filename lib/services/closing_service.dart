@@ -14,7 +14,7 @@ class ClosingService {
   /// - 200 → { closing_id, closing_date, closing_reason, closing_summary? }
   Future<Map<String, dynamic>> get(String clientId) async {
     final res = await _dio.get('/clients/$clientId/closing');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// CL-2: 종결 등록
@@ -30,7 +30,7 @@ class ClosingService {
       'closing_reason': closingReason,
       if (closingSummary != null) 'closing_summary': closingSummary,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// CL-3: 종결 정보 수정
@@ -40,14 +40,14 @@ class ClosingService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/clients/$clientId/closing', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// CL-4: 사후관리 목록 조회
   /// - 200 → { aftercare: [{ aftercare_id, contact_date, contact_method, note }] }
   Future<Map<String, dynamic>> listAftercare(String clientId) async {
     final res = await _dio.get('/clients/$clientId/aftercare');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// CL-5: 종결 요약 AI 초안 생성 (비동기)
@@ -55,6 +55,6 @@ class ClosingService {
   /// - 202 → { draft_id, status: "generating" }
   Future<Map<String, dynamic>> generateSummary(String clientId) async {
     final res = await _dio.post('/clients/$clientId/closing/summary');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

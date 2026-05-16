@@ -14,21 +14,21 @@ class NotificationService {
   /// - 200 → { notifications: [{ notification_id, type, message, is_read, created_at }] }
   Future<Map<String, dynamic>> list() async {
     final res = await _dio.get('/notifications');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// NT-2: 알림 읽음 처리
   /// - 200 → { notification_id, is_read: true, read_at }
   Future<Map<String, dynamic>> markRead(String notificationId) async {
     final res = await _dio.patch('/notifications/$notificationId/read');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// NT-3: 전체 알림 읽음 처리
   /// - 200 → { updated_count }
   Future<Map<String, dynamic>> markAllRead() async {
     final res = await _dio.patch('/notifications/read-all');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// NT-4: 위험 신호 Push 발송 (슈퍼바이저·관리자 자동 수신)
@@ -43,7 +43,7 @@ class NotificationService {
       'risk_level': riskLevel,
       if (message != null) 'message': message,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// NT-5: FCM 토큰 등록
@@ -57,6 +57,6 @@ class NotificationService {
       'fcm_token': fcmToken,
       'device_type': deviceType,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

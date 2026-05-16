@@ -6,6 +6,7 @@ import '../core/theme/app_typography.dart';
 import '../services/services.dart';
 import 'notification_page.dart';
 import 'session_detail_page.dart';
+import 'schedule_add_page.dart';
 
 class SessionListPage extends StatefulWidget {
   final String clientId;
@@ -104,6 +105,18 @@ class _SessionListPageState extends State<SessionListPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ScheduleAddPage(preselectedClientId: widget.clientId),
+            ),
+          );
+          _loadSessions();
+        },
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       appBar: AppBar(
         backgroundColor: AppColors.backgroundWhite,
         scrolledUnderElevation: 0,

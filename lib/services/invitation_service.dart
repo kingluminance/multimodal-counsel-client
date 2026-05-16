@@ -26,7 +26,7 @@ class InvitationService {
       if (expiresIn != null) 'expires_in': expiresIn,
       if (maxUse != null) 'max_use': maxUse,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// INV-2: 초대코드 검증 (비로그인 가능)
@@ -34,14 +34,14 @@ class InvitationService {
   /// - 200 무효 → { valid: false, reason: expired|already_used|not_found|revoked }
   Future<Map<String, dynamic>> verify(String code) async {
     final res = await _dio.get('/invitations/$code/verify');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// INV-3: 초대코드 목록 조회 (관리자)
   /// - 200 → { total, invitations: [{ code, role, used, expires_at }] }
   Future<Map<String, dynamic>> list() async {
     final res = await _dio.get('/invitations');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// INV-4: 초대코드 취소 (관리자)

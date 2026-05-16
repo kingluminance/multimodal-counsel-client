@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/theme/app_colors.dart';
@@ -24,6 +25,30 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _checkAuth() async {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+
+    // 웹: OAuth 콜백으로 돌아온 경우 URL에서 토큰 추출
+    if (kIsWeb) {
+      final uri = Uri.base;
+      final accessToken = uri.queryParameters['access_token'];
+      final refreshToken = uri.queryParameters['refresh_token'];
+      final name = uri.queryParameters['name'];
+
+      if (accessToken != null && accessToken.isNotEmpty) {
+        await _storage.write(key: 'access_token', value: accessToken);
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          await _storage.write(key: 'refresh_token', value: refreshToken);
+        }
+        if (name != null && name.isNotEmpty) {
+          await _storage.write(key: 'user_name', value: name);
+        }
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainScaffold()),
+        );
+        return;
+      }
+    }
+
     final token = await _storage.read(key: 'access_token');
     if (!mounted) return;
     Navigator.of(context).pushReplacement(

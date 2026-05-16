@@ -12,7 +12,7 @@ class PermissionService {
   /// - 200 → { permissions: { field_key: bool, ... } }
   Future<Map<String, dynamic>> getClientPermissions(String clientId) async {
     final res = await _dio.get('/clients/$clientId/permissions');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// PM-2: 클라이언트 공개 항목 설정 (사회복지사 전용)
@@ -27,7 +27,7 @@ class PermissionService {
       '/clients/$clientId/permissions',
       data: {'permissions': permissions},
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// PM-3: 역할별 접근 권한 조회
@@ -35,6 +35,6 @@ class PermissionService {
   /// - 200 → { role, accessible_fields: [] }
   Future<Map<String, dynamic>> getRolePermissions(String role) async {
     final res = await _dio.get('/roles/$role/permissions');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

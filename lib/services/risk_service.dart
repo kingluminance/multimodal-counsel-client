@@ -14,7 +14,7 @@ class RiskService {
   /// - 200 → { risk_id, risk_flag, risk_level, risk_type[], ... }
   Future<Map<String, dynamic>> get(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/risk');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// R-2: 위험요인 평가 등록
@@ -51,7 +51,7 @@ class RiskService {
       if (reportDate != null) 'report_date': reportDate,
       if (reportAgency != null) 'report_agency': reportAgency,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// R-3: 위험요인 평가 수정
@@ -61,6 +61,6 @@ class RiskService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/sessions/$sessionId/risk', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

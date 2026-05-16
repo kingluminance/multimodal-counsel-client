@@ -13,7 +13,7 @@ class FamilyService {
   /// - 200 → { members: [{ family_member_id, name, relation, age, cohabitation_status }] }
   Future<Map<String, dynamic>> list(String clientId) async {
     final res = await _dio.get('/clients/$clientId/family');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// F-2: 가족 구성원 등록
@@ -31,7 +31,7 @@ class FamilyService {
       if (age != null) 'age': age,
       if (cohabitationStatus != null) 'cohabitation_status': cohabitationStatus,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// F-3: 가족 구성원 수정
@@ -42,7 +42,7 @@ class FamilyService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/clients/$clientId/family/$memberId', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// F-4: 가족 구성원 삭제

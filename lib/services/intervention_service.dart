@@ -15,7 +15,7 @@ class InterventionService {
   ///           referral_service_id?, intervention_detail? }
   Future<Map<String, dynamic>> get(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/intervention');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// I-2: 개입 내용 등록 (AI 자동 추출 가능)
@@ -33,7 +33,7 @@ class InterventionService {
       if (referralServiceId != null) 'referral_service_id': referralServiceId,
       if (interventionDetail != null) 'intervention_detail': interventionDetail,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// I-3: 개입 내용 수정
@@ -43,7 +43,7 @@ class InterventionService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/sessions/$sessionId/intervention', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// I-4: 연계 기관 마스터 조회
@@ -52,7 +52,7 @@ class InterventionService {
     final res = await _dio.get('/agencies', queryParameters: {
       if (q != null) 'q': q,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// I-5: 연계 서비스 마스터 조회
@@ -61,6 +61,6 @@ class InterventionService {
     final res = await _dio.get('/services', queryParameters: {
       if (q != null) 'q': q,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

@@ -13,7 +13,7 @@ class NeedsService {
   ///           need_economic, need_health, need_housing, need_relationship }
   Future<Map<String, dynamic>> get(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/needs');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// N-2: 욕구 평가 등록 (AI 자동 분류 가능)
@@ -37,7 +37,7 @@ class NeedsService {
       if (needHousing != null) 'need_housing': needHousing,
       if (needRelationship != null) 'need_relationship': needRelationship,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// N-3: 욕구 평가 수정
@@ -47,6 +47,6 @@ class NeedsService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/sessions/$sessionId/needs', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

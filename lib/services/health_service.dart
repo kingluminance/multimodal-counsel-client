@@ -14,7 +14,7 @@ class HealthService {
   ///           functional_level, adl_score, bp_systolic, heart_rate, ... }
   Future<Map<String, dynamic>> get(String clientId) async {
     final res = await _dio.get('/clients/$clientId/health');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// H-4: 건강 상태 기간별 조회 (꺾은선 차트 데이터)
@@ -28,7 +28,7 @@ class HealthService {
       'from': from,
       'to': to,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// H-2: 건강 상태 등록 (rPPG 생체 데이터 포함)
@@ -52,7 +52,7 @@ class HealthService {
       if (bpSystolic != null) 'bp_systolic': bpSystolic,
       if (heartRate != null) 'heart_rate': heartRate,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// H-3: 건강 상태 수정
@@ -66,6 +66,6 @@ class HealthService {
       '/clients/$clientId/health/$recordId',
       data: data,
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

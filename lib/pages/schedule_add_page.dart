@@ -6,7 +6,8 @@ import '../core/theme/app_typography.dart';
 import '../services/services.dart';
 
 class ScheduleAddPage extends StatefulWidget {
-  const ScheduleAddPage({super.key});
+  final String? preselectedClientId;
+  const ScheduleAddPage({super.key, this.preselectedClientId});
 
   @override
   State<ScheduleAddPage> createState() => _ScheduleAddPageState();
@@ -51,7 +52,14 @@ class _ScheduleAddPageState extends State<ScheduleAddPage> {
       if (!mounted) return;
       setState(() {
         _clients = List<Map<String, dynamic>>.from(result['clients'] ?? []);
-        if (_clients.isNotEmpty) _selectedClient = _clients.first;
+        if (widget.preselectedClientId != null) {
+          _selectedClient = _clients.firstWhere(
+            (c) => (c['clientId'] ?? c['client_id']) == widget.preselectedClientId,
+            orElse: () => _clients.isNotEmpty ? _clients.first : {},
+          );
+        } else if (_clients.isNotEmpty) {
+          _selectedClient = _clients.first;
+        }
         _isLoading = false;
       });
     } on DioException catch (_) {
@@ -93,7 +101,7 @@ class _ScheduleAddPageState extends State<ScheduleAddPage> {
 
     setState(() => _isSaving = true);
     try {
-      final clientId = _selectedClient!['client_id'] as String? ?? '';
+      final clientId = (_selectedClient!['clientId'] ?? _selectedClient!['client_id']) as String? ?? '';
       await SessionService().create(
         clientId,
         sessionDate: _selectedDate,

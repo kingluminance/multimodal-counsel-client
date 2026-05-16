@@ -12,7 +12,7 @@ class TopicService {
   /// - 200 → { topic_id, main_topic, session_goal, client_statement_summary? }
   Future<Map<String, dynamic>> get(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/topic');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// T-2: 상담 주제 등록
@@ -32,7 +32,7 @@ class TopicService {
         'client_statement_summary': clientStatementSummary,
       'ai_draft': aiDraft,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// T-3: 상담 주제 수정
@@ -42,6 +42,6 @@ class TopicService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/sessions/$sessionId/topic', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

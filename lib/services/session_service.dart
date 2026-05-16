@@ -15,7 +15,7 @@ class SessionService {
   /// - 200 → { sessions: [{ session_id, session_number, session_date, status }] }
   Future<Map<String, dynamic>> listByClient(String clientId) async {
     final res = await _dio.get('/clients/$clientId/sessions');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// S-2: 회기 등록 (상담 시작)
@@ -40,14 +40,14 @@ class SessionService {
       'session_type': sessionType,
       if (sessionLocation != null) 'session_location': sessionLocation,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// S-3: 회기 상세 조회
   /// - 200 → 회기 전체 상세 정보
   Future<Map<String, dynamic>> detail(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// S-4: 회기 수정 (변경 필드만)
@@ -57,7 +57,7 @@ class SessionService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/sessions/$sessionId', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// S-5: 회기 삭제
@@ -72,6 +72,6 @@ class SessionService {
     final res = await _dio.get('/sessions/upcoming', queryParameters: {
       'worker_id': workerId,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

@@ -17,7 +17,7 @@ class DashboardService {
   /// - 200 → { client_id, name, risk_level, total_sessions, last_session_date, ... }
   Future<Map<String, dynamic>> clientSummary(String clientId) async {
     final res = await _dio.get('/clients/$clientId/dashboard');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-2: 혈압·심박 변화 추이 (꺾은선 차트)
@@ -37,7 +37,7 @@ class DashboardService {
         if (to != null) 'to': to,
       },
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-3: 감정 변화 추이 (영역 차트)
@@ -50,7 +50,7 @@ class DashboardService {
       '/clients/$clientId/dashboard/emotions',
       queryParameters: {'unit': unit},
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-4: 스트레스 지수 변화 (막대 차트)
@@ -64,34 +64,34 @@ class DashboardService {
       '/clients/$clientId/dashboard/stress',
       queryParameters: {'unit': unit},
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-5: 상담 목표 달성률 (도넛 차트)
   /// - 200 → { total_goals, achieved, progress_pct, trend }
   Future<Map<String, dynamic>> goals(String clientId) async {
     final res = await _dio.get('/clients/$clientId/dashboard/goals');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-6: 서비스 연계 타임라인
   /// - 200 → { referrals: [{ referral_date, agency_name, service_name, status }] }
   Future<Map<String, dynamic>> referrals(String clientId) async {
     final res = await _dio.get('/clients/$clientId/dashboard/referrals');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-7: 위험 신호 발생 이력 (달력 뷰)
   /// - 200 → { events: [{ date, risk_level, session_id }] }
   Future<Map<String, dynamic>> riskHistory(String clientId) async {
     final res = await _dio.get('/clients/$clientId/dashboard/risk-history');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// DB-8: 기관 전체 통계 (관리자 전용)
   /// - 200 → { total_clients, active_cases, high_risk, avg_sessions }
   Future<Map<String, dynamic>> organization() async {
     final res = await _dio.get('/dashboard/organization');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

@@ -13,7 +13,7 @@ class EconomicService {
   ///           benefit_types[], debt_yn, housing_cost }
   Future<Map<String, dynamic>> get(String clientId) async {
     final res = await _dio.get('/clients/$clientId/economic');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// E-2: 경제 상태 등록
@@ -35,7 +35,7 @@ class EconomicService {
       if (debtYn != null) 'debt_yn': debtYn,
       if (housingCost != null) 'housing_cost': housingCost,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// E-3: 경제 상태 수정
@@ -45,6 +45,6 @@ class EconomicService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/clients/$clientId/economic', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

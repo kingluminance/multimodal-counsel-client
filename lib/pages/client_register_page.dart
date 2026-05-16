@@ -50,17 +50,11 @@ class _ClientRegisterPageState extends State<ClientRegisterPage> {
 
     final data = <String, dynamic>{
       'name': name,
-      'phone': _phoneController.text.trim(),
+      'contactPhone': _phoneController.text.trim(),
       'address': _addressController.text.trim(),
-      'birth_date': birthDate,
+      'birthDate': birthDate,
       'gender': _gender,
-      'memo': _memoController.text.trim(),
     };
-
-    final email = _emailController.text.trim();
-    if (email.isNotEmpty) {
-      data['email'] = email;
-    }
 
     setState(() => _isLoading = true);
     try {

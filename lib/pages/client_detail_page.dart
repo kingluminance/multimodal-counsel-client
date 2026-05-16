@@ -6,6 +6,7 @@ import '../core/theme/app_typography.dart';
 import '../services/services.dart';
 import 'notification_page.dart';
 import 'client_edit_page.dart';
+import 'session_list_page.dart';
 
 class ClientDetailPage extends StatefulWidget {
   final String clientId;
@@ -229,7 +230,24 @@ class _ClientDetailPageState extends State<ClientDetailPage> {
           ),
           const SizedBox(height: 24),
           // 상담 이력 섹션
-          Text('상담 이력', style: AppTypography.sectionHeader),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('상담 이력', style: AppTypography.sectionHeader),
+              TextButton.icon(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SessionListPage(clientId: widget.clientId),
+                    ),
+                  );
+                  _loadData();
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('세션 관리'),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           // 검색바
           TextField(

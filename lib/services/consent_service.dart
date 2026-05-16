@@ -14,7 +14,7 @@ class ConsentService {
   ///           consent_withdraw_yn, consent_withdraw_date? }
   Future<Map<String, dynamic>> list(String clientId) async {
     final res = await _dio.get('/clients/$clientId/consents');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// CON-2: 동의 등록
@@ -36,7 +36,7 @@ class ConsentService {
       if (guardianConsentYn != null) 'guardian_consent_yn': guardianConsentYn,
       if (guardianName != null) 'guardian_name': guardianName,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// CON-3: 동의 수정 / 철회
@@ -51,6 +51,6 @@ class ConsentService {
       '/clients/$clientId/consents/$consentId',
       data: data,
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

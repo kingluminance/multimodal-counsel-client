@@ -27,14 +27,14 @@ class ClientService {
       if (riskLevel != null) 'risk_level': riskLevel,
       if (status != null) 'status': status,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// C-2: 클라이언트 등록 (사회복지사만)
   /// - 201 → { client_id, name }
   Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
     final res = await _dio.post('/clients', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// C-3: 클라이언트 상세 조회
@@ -42,7 +42,7 @@ class ClientService {
   /// - 200 → 클라이언트 상세 정보
   Future<Map<String, dynamic>> detail(String clientId) async {
     final res = await _dio.get('/clients/$clientId');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// C-4: 클라이언트 정보 수정 (변경 필드만)
@@ -52,7 +52,7 @@ class ClientService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/clients/$clientId', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// C-5: 클라이언트 비활성화 (소프트 삭제)
@@ -65,7 +65,7 @@ class ClientService {
   /// - 200 → { total, clients: [...] }
   Future<Map<String, dynamic>> search(String keyword) async {
     final res = await _dio.get('/clients/search', queryParameters: {'q': keyword});
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// C-7: 내담자 앱 접근 링크 발송 (SMS/이메일)

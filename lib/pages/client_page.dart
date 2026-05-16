@@ -182,7 +182,7 @@ class _ClientPageState extends State<ClientPage> {
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => ClientDetailPage(
-                                    clientId: _clients[i]['client_id'] as String,
+                                    clientId: (_clients[i]['clientId'] ?? _clients[i]['client_id']) as String,
                                   ),
                                 ),
                               ),
@@ -221,8 +221,8 @@ class _ClientCard extends StatelessWidget {
     final statusLabel = _statusLabel(status);
 
     final name = client['name'] as String? ?? '';
-    final birthDate = client['birth_date'] as String? ?? '';
-    final lastSession = client['last_session_date'] as String? ?? '-';
+    final birthDate = (client['birthDate'] ?? client['birth_date']) as String? ?? '';
+    final lastSession = (client['lastSessionDate'] ?? client['last_session_date']) as String? ?? '-';
 
     return GestureDetector(
       onTap: onTap,

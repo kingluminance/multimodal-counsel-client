@@ -22,20 +22,20 @@ class ReportService {
       if (clientId != null) 'client_id': clientId,
       if (reportType != null) 'report_type': reportType,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// RP-2: 리포트 조회
   /// - 200 → { report_id, status: generating|completed|failed, data: {...} }
   Future<Map<String, dynamic>> get(String reportId) async {
     final res = await _dio.get('/reports/$reportId');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// RP-3: 리포트 PDF 내보내기
   /// - 200 → { download_url, expires_at }
   Future<Map<String, dynamic>> export(String reportId) async {
     final res = await _dio.post('/reports/$reportId/export');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

@@ -33,7 +33,7 @@ class SpeechAIService {
       options: Options(contentType: 'multipart/form-data'),
       onSendProgress: onProgress,
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// AI-2: STT 전사 요청 (비동기)
@@ -48,21 +48,21 @@ class SpeechAIService {
       if (speakerCount != null) 'speaker_count': speakerCount,
       'language': language,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// AI-3: STT 전사 상태 확인
   /// - 200 → { status: processing | completed | failed }
   Future<Map<String, dynamic>> sttStatus(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/stt/status');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// AI-4: STT 전사 결과 조회
   /// - 200 → { status: "completed", transcript: [{ speaker: "S1", text: "..." }] }
   Future<Map<String, dynamic>> sttResult(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/stt/result');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// AI-5: AI 구조화 요청 (비동기 LLM 호출)
@@ -77,7 +77,7 @@ class SpeechAIService {
       'session_type': sessionType,
       if (categories != null) 'categories': categories,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// AI-6: AI 구조화 초안 조회
@@ -85,7 +85,7 @@ class SpeechAIService {
   ///           intervention_type, ... (카테고리 5~10·13 필드) }
   Future<Map<String, dynamic>> getDraft(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/ai/draft');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// AI-7: AI 초안 확정 (사회복지사 서명)
@@ -94,6 +94,6 @@ class SpeechAIService {
   /// - 200 → { session_id, confirmed: true, signed_at }
   Future<Map<String, dynamic>> confirm(String sessionId) async {
     final res = await _dio.post('/sessions/$sessionId/ai/confirm');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

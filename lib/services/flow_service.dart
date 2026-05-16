@@ -24,14 +24,14 @@ class FlowService {
       'crisis_type': crisisType,
       'notify_supervisor': notifySupervisor,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// FL-2: 위기조치 체크리스트 조회
   /// - 200 → { items: [{ id, label, required, done }] }
   Future<Map<String, dynamic>> getCrisisChecklist(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/crisis-checklist');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// FL-3: 위기조치 체크리스트 완료 처리
@@ -45,7 +45,7 @@ class FlowService {
       '/sessions/$sessionId/crisis-checklist',
       data: {'checklist_items': checklistItems},
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   // ────────────────────────── 프로그램 신청 ────────────────────────
@@ -62,7 +62,7 @@ class FlowService {
       'program_id': programId,
       if (docsRequired != null) 'docs_required': docsRequired,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// FL-5: 프로그램 신청 현황 조회
@@ -70,7 +70,7 @@ class FlowService {
   /// - status: 접수 | 심사 | 결정 | 통보
   Future<Map<String, dynamic>> listPrograms(String clientId) async {
     final res = await _dio.get('/clients/$clientId/programs');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// FL-6: 프로그램 신청 상태 변경
@@ -85,7 +85,7 @@ class FlowService {
       '/clients/$clientId/programs/$progId',
       data: {'status': status},
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   // ─────────────────────────── 사례관리 ────────────────────────────
@@ -102,21 +102,21 @@ class FlowService {
       'stage': stage,
       if (goals != null) 'goals': goals,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// FL-8: 사례관리 단계 목록 조회
   /// - 200 → { stages: [{ stage_id, stage, goals[], progress_pct }] }
   Future<Map<String, dynamic>> listCaseStages(String clientId) async {
     final res = await _dio.get('/clients/$clientId/case-stages');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// FL-9: 사례관리 목표 달성률 조회
   /// - 200 → { total_goals, achieved, progress_pct }
   Future<Map<String, dynamic>> caseStageProgress(String clientId) async {
     final res = await _dio.get('/clients/$clientId/case-stages/progress');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   // ─────────────────────────── 가족상담 ────────────────────────────
@@ -131,6 +131,6 @@ class FlowService {
       '/sessions/$sessionId/speaker-config',
       data: {'speakers': speakerFamilyMemberIds},
     );
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

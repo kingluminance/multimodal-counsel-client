@@ -13,7 +13,7 @@ class NextPlanService {
   ///           action_items[], worker_tasks[] }
   Future<Map<String, dynamic>> get(String sessionId) async {
     final res = await _dio.get('/sessions/$sessionId/next-plan');
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// NP-2: 차기 계획 등록
@@ -31,7 +31,7 @@ class NextPlanService {
       if (actionItems != null) 'action_items': actionItems,
       if (workerTasks != null) 'worker_tasks': workerTasks,
     });
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 
   /// NP-3: 차기 계획 수정
@@ -41,6 +41,6 @@ class NextPlanService {
     Map<String, dynamic> data,
   ) async {
     final res = await _dio.patch('/sessions/$sessionId/next-plan', data: data);
-    return res.data as Map<String, dynamic>;
+    return res.data['data'] as Map<String, dynamic>;
   }
 }

@@ -18,6 +18,9 @@ migrate_working_dir/
 # Claude
 .claude/
 
+#pencil
+.pen
+
 
 # IntelliJ related
 *.iml

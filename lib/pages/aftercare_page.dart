@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 
 // ── 모델 ─────────────────────────────────────────────────────
 
@@ -55,7 +57,7 @@ extension _StatusX on _AftercareStatus {
 class _AftercareItem {
   final DateTime date;
   final _AftercareStatus status;
-  final String? method; // 전화/방문/문자/영상통화
+  final String? method;
   final String? content;
 
   const _AftercareItem({
@@ -71,59 +73,86 @@ class _AftercareItem {
 const _contactMethods = ['전화', '방문', '문자', '영상통화'];
 const _statusLabels = ['연락됨', '예정', '미연락'];
 
-final _sampleItems = [
-  _AftercareItem(
-    date: DateTime(2023, 6, 1),
-    status: _AftercareStatus.completed,
-    method: '전화',
-    content: '내담자 안정적 생활 유지 중. 새 거주지 적응 완료, 아동 학교 등록 확인.',
-  ),
-  _AftercareItem(
-    date: DateTime(2023, 12, 15),
-    status: _AftercareStatus.completed,
-    method: '방문',
-    content: '가족 관계 개선 확인. 경제적 지원 추가 필요하여 지역 자활센터 연계 진행.',
-  ),
-  _AftercareItem(
-    date: DateTime(2024, 3, 1),
-    status: _AftercareStatus.missed,
-    method: '전화',
-    content: '3회 시도 후 연락 불가. 다음 분기 재시도 예정.',
-  ),
-  _AftercareItem(
-    date: DateTime(2024, 6, 1),
-    status: _AftercareStatus.completed,
-    method: '문자',
-    content: '자활 프로그램 참여 중. 취업 준비 단계 진입, 정서적으로 안정된 상태.',
-  ),
-  _AftercareItem(
-    date: DateTime(2025, 1, 15),
-    status: _AftercareStatus.scheduled,
-  ),
-  _AftercareItem(
-    date: DateTime(2025, 7, 1),
-    status: _AftercareStatus.scheduled,
-  ),
-];
-
 // ── 페이지 ────────────────────────────────────────────────────
 
 class AftercarePage extends StatefulWidget {
+  final String clientId;
   final String clientName;
-  const AftercarePage({super.key, this.clientName = '김지수'});
+
+  const AftercarePage({
+    super.key,
+    required this.clientId,
+    this.clientName = '',
+  });
 
   @override
   State<AftercarePage> createState() => _AftercarePageState();
 }
 
 class _AftercarePageState extends State<AftercarePage> {
-  late List<_AftercareItem> _items;
+  List<_AftercareItem> _items = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _items = List.from(_sampleItems)
-      ..sort((a, b) => a.date.compareTo(b.date));
+    _loadAftercare();
+  }
+
+  Future<void> _loadAftercare() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final result = await ClosingService().listAftercare(widget.clientId);
+      if (!mounted) return;
+      final raw = List<dynamic>.from(result['aftercare'] ?? []);
+      final items = raw.map((e) {
+        final m = e as Map<String, dynamic>;
+        final dateStr = m['contact_date'] as String? ?? '';
+        DateTime date;
+        try {
+          date = DateTime.parse(dateStr);
+        } catch (_) {
+          date = DateTime.now();
+        }
+        final note = m['note'] as String?;
+        final now = DateTime.now();
+        _AftercareStatus status;
+        if (date.isAfter(now)) {
+          status = _AftercareStatus.scheduled;
+        } else if (note != null && note.isNotEmpty) {
+          status = _AftercareStatus.completed;
+        } else {
+          status = _AftercareStatus.missed;
+        }
+        return _AftercareItem(
+          date: date,
+          status: status,
+          method: m['contact_method'] as String?,
+          content: note,
+        );
+      }).toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      setState(() {
+        _items = items;
+        _isLoading = false;
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.response?.data?['message'] ?? '데이터를 불러오지 못했습니다.';
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '데이터를 불러오지 못했습니다.';
+        _isLoading = false;
+      });
+    }
   }
 
   void _showAddSheet() {
@@ -142,25 +171,36 @@ class _AftercarePageState extends State<AftercarePage> {
 
   @override
   Widget build(BuildContext context) {
+    final displayName =
+        widget.clientName.isNotEmpty ? widget.clientName : '내담자';
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
       appBar: AppBar(
         backgroundColor: AppColors.backgroundWhite,
         elevation: 0,
         titleSpacing: 16,
-        title: Text('${widget.clientName} · 사후관리',
-            style: AppTypography.title),
+        title: Text('$displayName · 사후관리', style: AppTypography.title),
       ),
-      body: _items.isEmpty
-          ? const _EmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
-              itemCount: _items.length,
-              itemBuilder: (context, i) => _TimelineRow(
-                item: _items[i],
-                isLast: i == _items.length - 1,
-              ),
-            ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Text(
+                    _error!,
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: AppColors.danger),
+                  ),
+                )
+              : _items.isEmpty
+                  ? const _EmptyState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+                      itemCount: _items.length,
+                      itemBuilder: (context, i) => _TimelineRow(
+                        item: _items[i],
+                        isLast: i == _items.length - 1,
+                      ),
+                    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSheet,
         backgroundColor: AppColors.primary,
@@ -226,15 +266,12 @@ class _TimelineRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 좌측: 점 + 세로선 ────────────────────────────
           SizedBox(
             width: 20,
             child: Column(
               children: [
                 const SizedBox(height: 2),
-                // 점
                 _TimelineDot(status: item.status, color: color),
-                // 세로선
                 if (!isLast)
                   Expanded(
                     child: Center(
@@ -248,8 +285,6 @@ class _TimelineRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-
-          // ── 우측: 카드 ────────────────────────────────────
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -273,7 +308,6 @@ class _TimelineDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == _AftercareStatus.scheduled) {
-      // 예정: 링 스타일
       return Container(
         width: 14,
         height: 14,
@@ -284,7 +318,6 @@ class _TimelineDot extends StatelessWidget {
         ),
       );
     }
-    // 완료/미연락: 솔리드
     return Container(
       width: 14,
       height: 14,
@@ -326,7 +359,6 @@ class _TimelineCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 날짜 + 배지 + 방법
           Row(
             children: [
               Text(
@@ -339,10 +371,8 @@ class _TimelineCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // 상태 배지
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: s.badgeBg,
                   borderRadius: BorderRadius.circular(4),
@@ -360,8 +390,7 @@ class _TimelineCard extends StatelessWidget {
               if (item.method != null) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.inputBackground,
                     borderRadius: BorderRadius.circular(4),
@@ -386,8 +415,6 @@ class _TimelineCard extends StatelessWidget {
               ],
             ],
           ),
-
-          // 내용
           if (item.content != null && item.content!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
@@ -428,7 +455,7 @@ class _AddAftercareSheet extends StatefulWidget {
 class _AddAftercareSheetState extends State<_AddAftercareSheet> {
   DateTime? _selectedDate;
   String? _selectedMethod;
-  String? _selectedStatusLabel; // '연락됨' | '예정' | '미연락'
+  String? _selectedStatusLabel;
   final _contentCtrl = TextEditingController();
   bool _submitted = false;
 
@@ -446,7 +473,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
-      lastDate: DateTime(2027),
+      lastDate: DateTime(2030),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.light(primary: AppColors.primary),
@@ -468,8 +495,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
     }
   }
 
-  bool get _isValid =>
-      _selectedDate != null && _selectedStatusLabel != null;
+  bool get _isValid => _selectedDate != null && _selectedStatusLabel != null;
 
   void _submit() {
     setState(() => _submitted = true);
@@ -479,9 +505,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
         date: _selectedDate!,
         status: _resolveStatus(),
         method: _selectedMethod,
-        content: _contentCtrl.text.trim().isEmpty
-            ? null
-            : _contentCtrl.text.trim(),
+        content: _contentCtrl.text.trim().isEmpty ? null : _contentCtrl.text.trim(),
       ),
     );
     Navigator.of(context).pop();
@@ -501,7 +525,6 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 핸들
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 12, bottom: 16),
@@ -515,8 +538,6 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
             ),
             Text('사후관리 기록 추가', style: AppTypography.title),
             const SizedBox(height: 20),
-
-            // 날짜
             _SheetLabel('연락 날짜', required: true),
             const SizedBox(height: 6),
             GestureDetector(
@@ -564,8 +585,6 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
                 ),
               ),
             const SizedBox(height: 16),
-
-            // 연락 방법
             const _SheetLabel('연락 방법'),
             const SizedBox(height: 8),
             _ChipSelector(
@@ -576,8 +595,6 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
                   setState(() => _selectedMethod = _selectedMethod == v ? null : v),
             ),
             const SizedBox(height: 16),
-
-            // 연락 상태
             _SheetLabel('연락 상태', required: true),
             const SizedBox(height: 8),
             _ChipSelector(
@@ -588,8 +605,6 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
               error: _submitted && _selectedStatusLabel == null,
             ),
             const SizedBox(height: 16),
-
-            // 내용
             const _SheetLabel('내용'),
             const SizedBox(height: 6),
             TextField(
@@ -600,8 +615,7 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
                 filled: true,
                 fillColor: AppColors.inputBackground,
                 hintText: '연락 결과 및 내담자 상태를 기록하세요 (선택)',
-                hintStyle:
-                    AppTypography.body.copyWith(color: AppColors.textHint),
+                hintStyle: AppTypography.body.copyWith(color: AppColors.textHint),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -618,8 +632,6 @@ class _AddAftercareSheetState extends State<_AddAftercareSheet> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // 저장 버튼
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -708,12 +720,9 @@ class _ChipSelector extends StatelessWidget {
               onTap: () => onSelected(opt),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: isOn
-                      ? color.withOpacity(0.1)
-                      : AppColors.inputBackground,
+                  color: isOn ? color.withOpacity(0.1) : AppColors.inputBackground,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isOn ? color : Colors.transparent,

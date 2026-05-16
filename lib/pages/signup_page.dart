@@ -1,7 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/main_scaffold.dart';
 import '../widgets/primary_button.dart';
 
 class SignupPage extends StatefulWidget {
@@ -15,23 +19,28 @@ class _SignupPageState extends State<SignupPage> {
   final _inviteCodeController = TextEditingController();
   final _birthDateController = TextEditingController();
   final _organizationController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
 
   String? _inviteCodeError;
   String _selectedGender = ''; // 'male' | 'female' | ''
+  bool _isLoading = false;
 
-  // 유효하지 않은 초대코드 예시 체크
-  static const _invalidCodes = {'INVALID', 'TEST-0000'};
-
-  void _validateInviteCode(String value) {
-    setState(() {
-      if (value.isEmpty) {
-        _inviteCodeError = null;
-      } else if (_invalidCodes.contains(value.toUpperCase())) {
-        _inviteCodeError = '유효하지 않은 초대코드입니다.';
-      } else {
-        _inviteCodeError = null;
-      }
-    });
+  Future<void> _validateInviteCode(String value) async {
+    if (value.isEmpty) {
+      setState(() => _inviteCodeError = null);
+      return;
+    }
+    try {
+      final result = await InvitationService().verify(value.trim());
+      if (!mounted) return;
+      final valid = result['valid'] as bool? ?? false;
+      setState(() {
+        _inviteCodeError = valid ? null : '유효하지 않은 초대코드입니다.';
+      });
+    } catch (_) {
+      // 네트워크 오류 등은 onSubmit에서 처리
+      if (mounted) setState(() => _inviteCodeError = null);
+    }
   }
 
   Future<void> _pickBirthDate() async {
@@ -61,14 +70,80 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     final code = _inviteCodeController.text.trim();
     if (code.isEmpty) {
       setState(() => _inviteCodeError = '초대코드를 입력해주세요.');
       return;
     }
     if (_inviteCodeError != null) return;
-    // TODO: 가입 완료 처리
+
+    setState(() => _isLoading = true);
+    try {
+      // 초대코드 최종 검증
+      final verifyResult = await InvitationService().verify(code);
+      if (!mounted) return;
+      final valid = verifyResult['valid'] as bool? ?? false;
+      if (!valid) {
+        setState(() {
+          _isLoading = false;
+          _inviteCodeError = '유효하지 않은 초대코드입니다.';
+        });
+        return;
+      }
+
+      // oauth_token 읽기
+      final oauthToken = await _storage.read(key: 'oauth_token') ?? '';
+      if (!mounted) return;
+
+      // 생년월일 파싱 (YYYY-MM-DD)
+      String birthday = _birthDateController.text.trim();
+      if (birthday.isNotEmpty && birthday.contains('년')) {
+        try {
+          final parts = birthday
+              .replaceAll('년 ', '-')
+              .replaceAll('월 ', '-')
+              .replaceAll('일', '')
+              .trim();
+          birthday = parts;
+        } catch (_) {}
+      }
+
+      final result = await AuthService().workerSignUp(
+        oauthToken: oauthToken,
+        inviteCode: code,
+        gender: _selectedGender,
+        birthday: birthday,
+      );
+      if (!mounted) return;
+
+      await ApiClient().saveTokens(
+        accessToken: result['access_token'] as String? ?? '',
+        refreshToken: result['refresh_token'] as String? ?? '',
+      );
+      if (result['user_id'] != null) {
+        await _storage.write(key: 'user_id', value: result['user_id'].toString());
+      }
+      // oauth_token 제거
+      await _storage.delete(key: 'oauth_token');
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScaffold()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      String message = '가입 중 오류가 발생했습니다.';
+      if (e is DioException && e.response != null) {
+        message = e.response?.data?['message'] as String? ?? message;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -126,7 +201,7 @@ class _SignupPageState extends State<SignupPage> {
                 controller: _inviteCodeController,
                 hint: 'ABC-1234',
                 errorText: _inviteCodeError,
-                onChanged: _validateInviteCode,
+                onChanged: (v) => _validateInviteCode(v),
               ),
               const SizedBox(height: 24),
 
@@ -172,7 +247,8 @@ class _SignupPageState extends State<SignupPage> {
               // 가입 완료 버튼
               PrimaryButton(
                 label: '가입 완료',
-                onPressed: _onSubmit,
+                isLoading: _isLoading,
+                onPressed: _isLoading ? null : _onSubmit,
               ),
               const SizedBox(height: 32),
             ],

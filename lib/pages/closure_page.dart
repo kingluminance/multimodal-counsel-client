@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/primary_button.dart';
+import '../services/services.dart';
 
 // ── 상수 ─────────────────────────────────────────────────────
 
@@ -18,8 +20,13 @@ const _closureReasons = [
 
 class ClosurePage extends StatefulWidget {
   final String clientName;
+  final String clientId;
 
-  const ClosurePage({super.key, this.clientName = '김지수'});
+  const ClosurePage({
+    super.key,
+    this.clientName = '김지수',
+    this.clientId = '',
+  });
 
   @override
   State<ClosurePage> createState() => _ClosurePageState();
@@ -33,6 +40,16 @@ class _ClosurePageState extends State<ClosurePage> {
   DateTime? _contactDate;
   bool _isGenerating = false;
   bool _hasDraft = false;
+  bool _isLoading = false;
+  String? _existingClosingId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.clientId.isNotEmpty) {
+      _loadExistingClosing();
+    }
+  }
 
   @override
   void dispose() {
@@ -42,8 +59,41 @@ class _ClosurePageState extends State<ClosurePage> {
     super.dispose();
   }
 
+  Future<void> _loadExistingClosing() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await ClosingService().get(widget.clientId);
+      if (!mounted) return;
+      setState(() {
+        _existingClosingId = data['closing_id']?.toString();
+        final reason = data['closing_reason']?.toString();
+        if (reason != null && reason.isNotEmpty) {
+          _selectedReasons.add(reason);
+        }
+        final summary = data['closing_summary']?.toString();
+        if (summary != null && summary.isNotEmpty) {
+          _draftCtrl.text = summary;
+          _hasDraft = true;
+        }
+        final closingDate = data['closing_date']?.toString();
+        if (closingDate != null && closingDate.isNotEmpty) {
+          try {
+            _contactDate = DateTime.parse(closingDate);
+          } catch (_) {}
+        }
+      });
+    } on DioException {
+      // 종결 정보가 없는 경우(404 등) 무시
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   String _fmtDate(DateTime d) =>
       '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
+
+  String _fmtDateApi(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _pickContactDate() async {
     final picked = await showDatePicker(
@@ -62,18 +112,32 @@ class _ClosurePageState extends State<ClosurePage> {
   }
 
   Future<void> _generateDraft() async {
+    if (widget.clientId.isEmpty) return;
     setState(() => _isGenerating = true);
-    await Future.delayed(const Duration(milliseconds: 2200));
-    if (!mounted) return;
-    setState(() {
-      _isGenerating = false;
-      _hasDraft = true;
-      _draftCtrl.text =
-          '내담자 ${widget.clientName}님은 2023년 3월부터 2025년 5월까지 총 24회기의 상담을 진행하였습니다. '
-          '초기 호소 문제였던 가정폭력 후유 PTSD 증상이 현저히 감소하였으며, 사회적 지지체계 강화 및 자립 역량 향상 목표를 78% 달성하였습니다. '
-          '잔여 위험 요인으로는 경제적 불안정 상태가 지속되고 있어 지역 자활센터 연계가 권고됩니다. '
-          '사후관리를 통해 6개월 주기로 안부 확인 및 복지서비스 연계를 지속할 예정입니다.';
-    });
+    try {
+      await ClosingService().generateSummary(widget.clientId);
+      if (!mounted) return;
+      // 202 Accepted → 비동기 생성 중
+      // TODO: 실제 완료는 폴링 또는 웹소켓으로 처리 필요
+      // 임시로 3초 후 더미 초안 표시
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      setState(() {
+        _isGenerating = false;
+        _hasDraft = true;
+        _draftCtrl.text =
+            '내담자 ${widget.clientName}님은 2023년 3월부터 2025년 5월까지 총 24회기의 상담을 진행하였습니다. '
+            '초기 호소 문제였던 가정폭력 후유 PTSD 증상이 현저히 감소하였으며, 사회적 지지체계 강화 및 자립 역량 향상 목표를 78% 달성하였습니다. '
+            '잔여 위험 요인으로는 경제적 불안정 상태가 지속되고 있어 지역 자활센터 연계가 권고됩니다. '
+            '사후관리를 통해 6개월 주기로 안부 확인 및 복지서비스 연계를 지속할 예정입니다.';
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() => _isGenerating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   bool get _canSubmit => _selectedReasons.isNotEmpty;
@@ -91,8 +155,59 @@ class _ClosurePageState extends State<ClosurePage> {
     }
     showDialog(
       context: context,
-      builder: (_) => _ConfirmDialog(clientName: widget.clientName),
+      builder: (_) => _ConfirmDialog(
+        clientName: widget.clientName,
+        onConfirm: _saveAndClose,
+      ),
     );
+  }
+
+  Future<void> _saveAndClose() async {
+    if (widget.clientId.isEmpty) {
+      Navigator.of(context).pop();
+      return;
+    }
+    try {
+      final closingDate = _contactDate != null
+          ? _fmtDateApi(_contactDate!)
+          : _fmtDateApi(DateTime.now());
+      final closingReason = _selectedReasons.join(',');
+      final closingSummary =
+          _draftCtrl.text.isNotEmpty ? _draftCtrl.text : null;
+
+      if (_existingClosingId != null) {
+        await ClosingService().update(widget.clientId, {
+          'closing_date': closingDate,
+          'closing_reason': closingReason,
+          if (closingSummary != null) 'closing_summary': closingSummary,
+        });
+      } else {
+        await ClosingService().create(
+          widget.clientId,
+          closingDate: closingDate,
+          closingReason: closingReason,
+          closingSummary: closingSummary,
+        );
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop(); // dialog
+      Navigator.of(context).pop(); // closure page
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${widget.clientName}님 케이스가 종결되었습니다.',
+            style: const TextStyle(fontFamily: 'Pretendard'),
+          ),
+          backgroundColor: AppColors.primaryDark,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
@@ -108,202 +223,204 @@ class _ClosurePageState extends State<ClosurePage> {
         title: Text('${widget.clientName} · 종결 등록',
             style: AppTypography.title),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding:
-                  EdgeInsets.fromLTRB(16, 16, 16, 16 + safeBottom + 64),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── 요약 카드 ────────────────────────────
-                  _SummaryCard(clientName: widget.clientName),
-                  const SizedBox(height: 24),
-
-                  // ── 종결 사유 ────────────────────────────
-                  const _SectionLabel('종결 사유', required: true),
-                  const SizedBox(height: 10),
-                  _ReasonChips(
-                    selected: _selectedReasons,
-                    onToggle: (r) => setState(() {
-                      _selectedReasons.contains(r)
-                          ? _selectedReasons.remove(r)
-                          : _selectedReasons.add(r);
-                    }),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── 잔여 위험 요인 ───────────────────────
-                  const _SectionLabel('잔여 위험 요인'),
-                  const SizedBox(height: 8),
-                  AppTextField(
-                    controller: _riskFactorCtrl,
-                    maxLines: 3,
-                    hint: '종결 후 남아 있는 위험 요인을 기술하세요.',
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── 사후관리 계획 ────────────────────────
-                  const _SectionLabel('사후관리 계획'),
-                  const SizedBox(height: 8),
-                  AppTextField(
-                    controller: _aftercareCtrl,
-                    maxLines: 3,
-                    hint: '사후관리 방향 및 연계 기관을 기술하세요.',
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── 사후 연락 예정일 ─────────────────────
-                  const _SectionLabel('사후 연락 예정일'),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: _pickContactDate,
-                    child: Container(
-                      height: 44,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.inputBackground,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _contactDate != null
-                                  ? _fmtDate(_contactDate!)
-                                  : '날짜를 선택하세요',
-                              style: AppTypography.body.copyWith(
-                                color: _contactDate != null
-                                    ? AppColors.textPrimary
-                                    : AppColors.textHint,
-                              ),
-                            ),
-                          ),
-                          const Icon(Icons.calendar_today_outlined,
-                              size: 18, color: AppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // ── AI 종결 요약 초안 ────────────────────
-                  const _SectionLabel('AI 종결 요약'),
-                  const SizedBox(height: 10),
-
-                  // AI 생성 버튼
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: OutlinedButton.icon(
-                      onPressed: _isGenerating ? null : _generateDraft,
-                      icon: _isGenerating
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.purple,
-                              ),
-                            )
-                          : const Icon(Icons.auto_awesome_outlined,
-                              size: 18, color: AppColors.purple),
-                      label: Text(
-                        _isGenerating
-                            ? 'AI 초안 생성 중...'
-                            : (_hasDraft ? '초안 재생성' : 'AI 종결 요약 초안 생성'),
-                        style: const TextStyle(
-                          fontFamily: 'Pretendard',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.purple,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: AppColors.purple, width: 1.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        disabledForegroundColor:
-                            AppColors.purple.withOpacity(0.4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 초안 텍스트 영역
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 350),
-                    decoration: BoxDecoration(
-                      color: _hasDraft
-                          ? AppColors.purple.withOpacity(0.03)
-                          : AppColors.inputBackground,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: _hasDraft
-                            ? AppColors.purple.withOpacity(0.5)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Stack(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding:
+                        EdgeInsets.fromLTRB(16, 16, 16, 16 + safeBottom + 64),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextField(
-                          controller: _draftCtrl,
-                          maxLines: 6,
-                          style: AppTypography.body,
-                          decoration: InputDecoration(
-                            hintText: _hasDraft
-                                ? null
-                                : 'AI 초안 생성 버튼을 눌러 요약 초안을 생성하세요.\n생성 후 직접 수정할 수 있습니다.',
-                            hintStyle: AppTypography.body
-                                .copyWith(color: AppColors.textHint),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.all(14),
-                          ),
+                        // ── 요약 카드 ────────────────────────────
+                        _SummaryCard(clientName: widget.clientName),
+                        const SizedBox(height: 24),
+
+                        // ── 종결 사유 ────────────────────────────
+                        const _SectionLabel('종결 사유', required: true),
+                        const SizedBox(height: 10),
+                        _ReasonChips(
+                          selected: _selectedReasons,
+                          onToggle: (r) => setState(() {
+                            _selectedReasons.contains(r)
+                                ? _selectedReasons.remove(r)
+                                : _selectedReasons.add(r);
+                          }),
                         ),
-                        if (_hasDraft)
-                          Positioned(
-                            top: 8,
-                            right: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.purple.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.auto_awesome,
-                                      size: 10, color: AppColors.purple),
-                                  SizedBox(width: 3),
-                                  Text(
-                                    'AI 초안',
-                                    style: TextStyle(
-                                      fontFamily: 'Pretendard',
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.purple,
+                        const SizedBox(height: 24),
+
+                        // ── 잔여 위험 요인 ───────────────────────
+                        const _SectionLabel('잔여 위험 요인'),
+                        const SizedBox(height: 8),
+                        AppTextField(
+                          controller: _riskFactorCtrl,
+                          maxLines: 3,
+                          hint: '종결 후 남아 있는 위험 요인을 기술하세요.',
+                        ),
+                        const SizedBox(height: 20),
+
+                        // ── 사후관리 계획 ────────────────────────
+                        const _SectionLabel('사후관리 계획'),
+                        const SizedBox(height: 8),
+                        AppTextField(
+                          controller: _aftercareCtrl,
+                          maxLines: 3,
+                          hint: '사후관리 방향 및 연계 기관을 기술하세요.',
+                        ),
+                        const SizedBox(height: 20),
+
+                        // ── 사후 연락 예정일 ─────────────────────
+                        const _SectionLabel('사후 연락 예정일'),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: _pickContactDate,
+                          child: Container(
+                            height: 44,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.inputBackground,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _contactDate != null
+                                        ? _fmtDate(_contactDate!)
+                                        : '날짜를 선택하세요',
+                                    style: AppTypography.body.copyWith(
+                                      color: _contactDate != null
+                                          ? AppColors.textPrimary
+                                          : AppColors.textHint,
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                                const Icon(Icons.calendar_today_outlined,
+                                    size: 18, color: AppColors.textSecondary),
+                              ],
                             ),
                           ),
+                        ),
+                        const SizedBox(height: 28),
+
+                        // ── AI 종결 요약 초안 ────────────────────
+                        const _SectionLabel('AI 종결 요약'),
+                        const SizedBox(height: 10),
+
+                        // AI 생성 버튼
+                        SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: OutlinedButton.icon(
+                            onPressed: _isGenerating ? null : _generateDraft,
+                            icon: _isGenerating
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.purple,
+                                    ),
+                                  )
+                                : const Icon(Icons.auto_awesome_outlined,
+                                    size: 18, color: AppColors.purple),
+                            label: Text(
+                              _isGenerating
+                                  ? 'AI 초안 생성 중...'
+                                  : (_hasDraft ? '초안 재생성' : 'AI 종결 요약 초안 생성'),
+                              style: const TextStyle(
+                                fontFamily: 'Pretendard',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.purple,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                  color: AppColors.purple, width: 1.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              disabledForegroundColor:
+                                  AppColors.purple.withOpacity(0.4),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // 초안 텍스트 영역
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 350),
+                          decoration: BoxDecoration(
+                            color: _hasDraft
+                                ? AppColors.purple.withOpacity(0.03)
+                                : AppColors.inputBackground,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _hasDraft
+                                  ? AppColors.purple.withOpacity(0.5)
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Stack(
+                            children: [
+                              TextField(
+                                controller: _draftCtrl,
+                                maxLines: 6,
+                                style: AppTypography.body,
+                                decoration: InputDecoration(
+                                  hintText: _hasDraft
+                                      ? null
+                                      : 'AI 초안 생성 버튼을 눌러 요약 초안을 생성하세요.\n생성 후 직접 수정할 수 있습니다.',
+                                  hintStyle: AppTypography.body
+                                      .copyWith(color: AppColors.textHint),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.all(14),
+                                ),
+                              ),
+                              if (_hasDraft)
+                                Positioned(
+                                  top: 8,
+                                  right: 10,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.purple.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.auto_awesome,
+                                            size: 10, color: AppColors.purple),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'AI 초안',
+                                          style: TextStyle(
+                                            fontFamily: 'Pretendard',
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.purple,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       // ── 하단 종결 확정 버튼 ────────────────────────────────
       bottomNavigationBar: Container(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + safeBottom),
@@ -571,7 +688,12 @@ class _SectionLabel extends StatelessWidget {
 
 class _ConfirmDialog extends StatelessWidget {
   final String clientName;
-  const _ConfirmDialog({required this.clientName});
+  final Future<void> Function() onConfirm;
+
+  const _ConfirmDialog({
+    required this.clientName,
+    required this.onConfirm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -627,20 +749,7 @@ class _ConfirmDialog extends StatelessWidget {
           ),
         ),
         ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop(); // dialog
-            Navigator.of(context).pop(); // closure page
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '$clientName님 케이스가 종결되었습니다.',
-                  style: const TextStyle(fontFamily: 'Pretendard'),
-                ),
-                backgroundColor: AppColors.primaryDark,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+          onPressed: () => onConfirm(),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryDark,
             foregroundColor: Colors.white,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/primary_button.dart';
+import '../services/services.dart';
 
 // ── 역할 ─────────────────────────────────────────────────────
 
@@ -44,6 +46,17 @@ extension _CodeRoleX on _CodeRole {
   }
 }
 
+_CodeRole _roleFromString(String? role) {
+  switch (role) {
+    case 'supervisor':
+      return _CodeRole.supervisor;
+    case 'admin':
+      return _CodeRole.admin;
+    default:
+      return _CodeRole.counselor;
+  }
+}
+
 // ── 모델 ─────────────────────────────────────────────────────
 
 class _InviteCode {
@@ -51,22 +64,17 @@ class _InviteCode {
   final _CodeRole role;
   final String org;
   final DateTime expiresAt;
-  final int usedCount;
-  final int maxCount;
-  final String? memo;
+  final bool used;
 
   const _InviteCode({
     required this.code,
     required this.role,
     required this.org,
     required this.expiresAt,
-    required this.usedCount,
-    required this.maxCount,
-    this.memo,
+    required this.used,
   });
 
-  bool get isExpired =>
-      DateTime.now().isAfter(expiresAt) || usedCount >= maxCount;
+  bool get isExpired => DateTime.now().isAfter(expiresAt) || used;
 }
 
 // ── 상수 ─────────────────────────────────────────────────────
@@ -74,44 +82,16 @@ class _InviteCode {
 const _roleLabels = ['사회복지사', '슈퍼바이저', '관리자'];
 const _orgLabels = ['행복복지관', '한마음복지관', '희망케어센터', '미래복지원'];
 
-final _sampleCodes = [
-  _InviteCode(
-    code: 'A1B2-C3D4',
-    role: _CodeRole.counselor,
-    org: '행복복지관',
-    expiresAt: DateTime(2025, 6, 15),
-    usedCount: 2,
-    maxCount: 5,
-    memo: '2팀 신규 채용',
-  ),
-  _InviteCode(
-    code: 'X7Y8-Z9W0',
-    role: _CodeRole.supervisor,
-    org: '행복복지관',
-    expiresAt: DateTime(2025, 5, 1),
-    usedCount: 1,
-    maxCount: 1,
-    memo: null,
-  ),
-  _InviteCode(
-    code: 'P3Q4-R5S6',
-    role: _CodeRole.counselor,
-    org: '한마음복지관',
-    expiresAt: DateTime(2025, 7, 31),
-    usedCount: 0,
-    maxCount: 3,
-    memo: '3분기 확충',
-  ),
-  _InviteCode(
-    code: 'M1N2-O3P4',
-    role: _CodeRole.admin,
-    org: '희망케어센터',
-    expiresAt: DateTime(2025, 12, 31),
-    usedCount: 0,
-    maxCount: 1,
-    memo: '신규 기관 관리자',
-  ),
-];
+String _roleLabelToApi(String label) {
+  switch (label) {
+    case '슈퍼바이저':
+      return 'supervisor';
+    case '관리자':
+      return 'admin';
+    default:
+      return 'counselor';
+  }
+}
 
 // ── 페이지 ────────────────────────────────────────────────────
 
@@ -123,25 +103,70 @@ class InviteCodePage extends StatefulWidget {
 }
 
 class _InviteCodePageState extends State<InviteCodePage> {
-  List<_InviteCode> _codes = List.from(_sampleCodes);
+  List<_InviteCode> _codes = [];
+  bool _isLoading = false;
 
-  void _deleteCode(_InviteCode code) {
-    final idx = _codes.indexOf(code);
-    setState(() => _codes.remove(code));
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          '초대코드가 취소되었습니다.',
-          style: TextStyle(fontFamily: 'Pretendard'),
+  @override
+  void initState() {
+    super.initState();
+    _loadCodes();
+  }
+
+  Future<void> _loadCodes() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await InvitationService().list();
+      if (!mounted) return;
+      final list = data['invitations'] as List<dynamic>? ?? [];
+      setState(() {
+        _codes = list.map((e) {
+          final map = e as Map<String, dynamic>;
+          DateTime expiresAt;
+          try {
+            expiresAt = DateTime.parse(map['expires_at']?.toString() ?? '');
+          } catch (_) {
+            expiresAt = DateTime.now().subtract(const Duration(days: 1));
+          }
+          return _InviteCode(
+            code: map['code']?.toString() ?? '',
+            role: _roleFromString(map['role']?.toString()),
+            org: map['org_id']?.toString() ?? '',
+            expiresAt: expiresAt,
+            used: map['used'] as bool? ?? false,
+          );
+        }).toList();
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _cancelCode(_InviteCode code) async {
+    try {
+      await InvitationService().cancel(code.code);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '초대코드가 취소되었습니다.',
+            style: TextStyle(fontFamily: 'Pretendard'),
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
-        action: SnackBarAction(
-          label: '되돌리기',
-          onPressed: () => setState(() => _codes.insert(idx, code)),
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+      await _loadCodes();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   void _showIssueSheet() {
@@ -149,7 +174,7 @@ class _InviteCodePageState extends State<InviteCodePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _IssueCodeSheet(),
+      builder: (_) => _IssueCodeSheet(onIssued: _loadCodes),
     );
   }
 
@@ -163,39 +188,42 @@ class _InviteCodePageState extends State<InviteCodePage> {
         titleSpacing: 16,
         title: Text('초대코드 관리', style: AppTypography.title),
       ),
-      body: _codes.isEmpty
-          ? const _EmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _codes.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                final code = _codes[i];
-                return Dismissible(
-                  key: ValueKey(code.code),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (_) => _deleteCode(code),
-                  background: _DismissBackground(),
-                  child: _CodeCard(
-                    code: code,
-                    onCopy: () {
-                      Clipboard.setData(ClipboardData(text: code.code));
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            '코드가 복사되었습니다.',
-                            style: TextStyle(fontFamily: 'Pretendard'),
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _codes.isEmpty
+              ? const _EmptyState()
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _codes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) {
+                    final code = _codes[i];
+                    return Dismissible(
+                      key: ValueKey(code.code),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (_) => _cancelCode(code),
+                      background: _DismissBackground(),
+                      child: _CodeCard(
+                        code: code,
+                        onCopy: () {
+                          Clipboard.setData(ClipboardData(text: code.code));
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                '코드가 복사되었습니다.',
+                                style: TextStyle(fontFamily: 'Pretendard'),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        onCancel: () => _cancelCode(code),
+                      ),
+                    );
+                  },
+                ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showIssueSheet,
         backgroundColor: AppColors.primary,
@@ -280,8 +308,9 @@ class _DismissBackground extends StatelessWidget {
 class _CodeCard extends StatelessWidget {
   final _InviteCode code;
   final VoidCallback onCopy;
+  final VoidCallback onCancel;
 
-  const _CodeCard({required this.code, required this.onCopy});
+  const _CodeCard({required this.code, required this.onCopy, required this.onCancel});
 
   String _fmtDate(DateTime d) =>
       '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
@@ -346,7 +375,7 @@ class _CodeCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // ── 하단 행: 역할칩 + 기관 + 만료일 + 사용현황 ──
+          // ── 하단 행: 역할칩 + 기관 + 만료일 ──
           Wrap(
             spacing: 8,
             runSpacing: 6,
@@ -385,10 +414,10 @@ class _CodeCard extends StatelessWidget {
                       size: 12, color: AppColors.textSecondary),
                   const SizedBox(width: 3),
                   Text(
-                    '${code.usedCount}/${code.maxCount} 사용',
+                    code.used ? '사용됨' : '미사용',
                     style: AppTypography.caption.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: code.usedCount >= code.maxCount
+                      color: code.used
                           ? AppColors.red
                           : AppColors.textSecondary,
                     ),
@@ -397,20 +426,6 @@ class _CodeCard extends StatelessWidget {
               ),
             ],
           ),
-
-          // 메모
-          if (code.memo != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              code.memo!,
-              style: const TextStyle(
-                fontFamily: 'Pretendard',
-                fontSize: 12,
-                color: AppColors.textHint,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -447,7 +462,8 @@ class _RoleChip extends StatelessWidget {
 // ── 초대코드 발급 바텀시트 ────────────────────────────────────
 
 class _IssueCodeSheet extends StatefulWidget {
-  const _IssueCodeSheet();
+  final VoidCallback onIssued;
+  const _IssueCodeSheet({required this.onIssued});
 
   @override
   State<_IssueCodeSheet> createState() => _IssueCodeSheetState();
@@ -460,6 +476,7 @@ class _IssueCodeSheetState extends State<_IssueCodeSheet> {
   final _maxCountCtrl = TextEditingController(text: '5');
   final _memoCtrl = TextEditingController();
   bool _submitted = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -490,11 +507,31 @@ class _IssueCodeSheetState extends State<_IssueCodeSheet> {
   bool get _isValid =>
       _selectedRole != null && _selectedOrg != null && _expiresAt != null;
 
-  void _submit() {
+  Future<void> _submit() async {
     setState(() => _submitted = true);
     if (!_isValid) return;
-    Navigator.of(context).pop();
-    // TODO: 실제 코드 발급 API
+    setState(() => _isSubmitting = true);
+    try {
+      final expiresInDays = _expiresAt!.difference(DateTime.now()).inDays;
+      final maxUse = int.tryParse(_maxCountCtrl.text) ?? 5;
+      await InvitationService().issue(
+        role: _roleLabelToApi(_selectedRole!),
+        orgId: _selectedOrg!,
+        memo: _memoCtrl.text.isNotEmpty ? _memoCtrl.text : null,
+        expiresIn: expiresInDays > 0 ? expiresInDays : 1,
+        maxUse: maxUse,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onIssued();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -666,7 +703,9 @@ class _IssueCodeSheetState extends State<_IssueCodeSheet> {
               ),
             ),
             const SizedBox(height: 24),
-            PrimaryButton(label: '발급하기', onPressed: _submit),
+            _isSubmitting
+                ? const Center(child: CircularProgressIndicator())
+                : PrimaryButton(label: '발급하기', onPressed: _submit),
           ],
         ),
       ),

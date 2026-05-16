@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 import 'client_page.dart';
+import 'client_detail_page.dart';
 import 'notification_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -13,17 +18,68 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _storage = FlutterSecureStorage();
+
   int _weekOffset = 0;
+  String _workerName = '';
+  List<Map<String, dynamic>> _clients = [];
+  Set<String> _sessionDates = {}; // 'YYYY-MM-DD' format
+  bool _isLoading = false;
 
-  // 샘플 내담자 데이터
-  final List<Map<String, String>> _clients = const [
-    {'name': '홍길동', 'status': '상담예정', 'birth': '1982.04.02', 'lastSession': '2025.06.14'},
-    {'name': '김민지', 'status': '상담완료', 'birth': '1990.11.15', 'lastSession': '2025.06.10'},
-    {'name': '박서연', 'status': '상담예정', 'birth': '1995.07.22', 'lastSession': '2025.06.13'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
-  // 상담 예정 날짜 (요일 인덱스 기준, 0=일 .. 6=토)
-  final Set<int> _scheduledDays = {1, 3, 5}; // 월, 수, 금
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final userId = await _storage.read(key: 'user_id') ?? '';
+
+      final futures = <Future>[
+        ClientService().list(),
+      ];
+      if (userId.isNotEmpty) {
+        futures.add(SessionService().upcoming(userId));
+        futures.add(WorkerService().getWorker(userId));
+      }
+
+      final results = await Future.wait(futures);
+      if (!mounted) return;
+
+      final clients = List<Map<String, dynamic>>.from(
+        (results[0] as Map<String, dynamic>)['clients'] ?? [],
+      );
+
+      Set<String> dates = {};
+      if (userId.isNotEmpty && results.length > 1) {
+        final sessions = List<dynamic>.from(
+          (results[1] as Map<String, dynamic>)['sessions'] ?? [],
+        );
+        for (final s in sessions) {
+          final d = s['session_date'] as String?;
+          if (d != null) dates.add(d);
+        }
+      }
+
+      String workerName = '';
+      if (userId.isNotEmpty && results.length > 2) {
+        workerName = (results[2] as Map<String, dynamic>)['name'] as String? ?? '';
+      }
+
+      setState(() {
+        _clients = clients;
+        _sessionDates = dates;
+        _workerName = workerName;
+        _isLoading = false;
+      });
+    } on DioException catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,17 +87,19 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: AppColors.backgroundGrey,
       appBar: _buildAppBar(context),
       drawer: _buildDrawer(context),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWeeklyCalendarCard(),
-            const SizedBox(height: 20),
-            _buildClientListSection(context),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWeeklyCalendarCard(),
+                  const SizedBox(height: 20),
+                  _buildClientListSection(context),
+                ],
+              ),
+            ),
     );
   }
 
@@ -64,40 +122,13 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       actions: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const NotificationPage()),
-                );
-              },
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: const BoxDecoration(
-                  color: AppColors.danger,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    '1',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationPage()),
+            );
+          },
         ),
       ],
     );
@@ -105,9 +136,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildWeeklyCalendarCard() {
     final now = DateTime.now();
-    // 이번주 월요일 계산 (weekOffset 적용)
-    final monday = now.subtract(Duration(days: now.weekday - 1))
-        .add(Duration(days: _weekOffset * 7));
+    final monday =
+        now.subtract(Duration(days: now.weekday - 1)).add(Duration(days: _weekOffset * 7));
     final weekNum = (monday.day / 7).ceil();
 
     return Container(
@@ -125,10 +155,15 @@ class _HomePageState extends State<HomePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('홍길동님', style: AppTypography.h3.copyWith(color: AppColors.textPrimary)),
+                  Text(
+                    _workerName.isNotEmpty ? '$_workerName님' : '안녕하세요',
+                    style: AppTypography.h3.copyWith(color: AppColors.textPrimary),
+                  ),
                   const SizedBox(height: 2),
-                  Text('한주간 상담 일정을 확인해보세요!',
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  Text(
+                    '한주간 상담 일정을 확인해보세요!',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                  ),
                 ],
               ),
               const Text('📅', style: TextStyle(fontSize: 28)),
@@ -143,7 +178,6 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                // 월 헤더 + 전체보기
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -151,34 +185,41 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         GestureDetector(
                           onTap: () => setState(() => _weekOffset--),
-                          child: const Icon(Icons.chevron_left, size: 18, color: AppColors.textSecondary),
+                          child: const Icon(Icons.chevron_left,
+                              size: 18, color: AppColors.textSecondary),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${monday.year}년 ${monday.month}월 ${weekNum}주차',
-                          style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                          style:
+                              AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(width: 4),
                         GestureDetector(
                           onTap: () => setState(() => _weekOffset++),
-                          child: const Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
+                          child: const Icon(Icons.chevron_right,
+                              size: 18, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ClientPage()),
+                      ),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: AppColors.primary,
                       ),
-                      child: Text('전체보기', style: AppTypography.caption.copyWith(color: AppColors.primary)),
+                      child: Text(
+                        '전체보기',
+                        style: AppTypography.caption.copyWith(color: AppColors.primary),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                // 요일 헤더
                 Row(
                   children: ['일', '월', '화', '수', '목', '금', '토']
                       .asMap()
@@ -187,37 +228,32 @@ class _HomePageState extends State<HomePage> {
                     final isFirst = e.key == 0;
                     final isLast = e.key == 6;
                     return Expanded(
-                      child: Column(
-                        children: [
-                          Text(
-                            e.value,
-                            textAlign: TextAlign.center,
-                            style: AppTypography.caption.copyWith(
-                              color: isFirst
-                                  ? AppColors.danger
-                                  : isLast
-                                      ? AppColors.chipScheduledFg
-                                      : AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        e.value,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.caption.copyWith(
+                          color: isFirst
+                              ? AppColors.danger
+                              : isLast
+                                  ? AppColors.chipScheduledFg
+                                  : AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 6),
-                // 날짜 행 (일요일부터 시작)
                 Row(
                   children: List.generate(7, (i) {
-                    // 0=일, 1=월..6=토
-                    // monday는 weekday=1, so sunday = monday - 1
                     final sunday = monday.subtract(const Duration(days: 1));
                     final date = sunday.add(Duration(days: i));
                     final isToday = date.year == now.year &&
                         date.month == now.month &&
                         date.day == now.day;
-                    final hasSchedule = _scheduledDays.contains(i);
+                    final dateStr =
+                        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                    final hasSchedule = _sessionDates.contains(dateStr);
                     final isSunday = i == 0;
                     final isSat = i == 6;
 
@@ -274,6 +310,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildClientListSection(BuildContext context) {
+    final preview = _clients.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -288,11 +325,9 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ClientPage()),
-                );
-              },
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ClientPage()),
+              ),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: Size.zero,
@@ -304,17 +339,41 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         const SizedBox(height: 8),
-        ..._clients.map((c) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _buildClientCard(c),
-            )),
+        if (preview.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                '내담자가 없습니다.',
+                style: AppTypography.bodyMedium.copyWith(color: AppColors.textHint),
+              ),
+            ),
+          )
+        else
+          ...preview.map((c) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ClientDetailPage(
+                        clientId: c['client_id'] as String? ?? '',
+                      ),
+                    ),
+                  ),
+                  child: _buildClientCard(c),
+                ),
+              )),
       ],
     );
   }
 
-  Widget _buildClientCard(Map<String, String> client) {
-    final status = client['status']!;
-    final isScheduled = status == '상담예정';
+  Widget _buildClientCard(Map<String, dynamic> client) {
+    final status = client['status'] as String? ?? '';
+    final isScheduled = status == '상담예정' || status == 'SCHEDULED' || status == 'ACTIVE';
+    final statusLabel = _statusLabel(status);
+    final name = client['name'] as String? ?? '';
+    final birthDate = (client['birth_date'] as String? ?? '').replaceAll('-', '.');
+    final lastSession = (client['last_session_date'] as String? ?? '-').replaceAll('-', '.');
 
     return Container(
       decoration: BoxDecoration(
@@ -331,7 +390,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Row(
                 children: [
-                  Text(client['name']!, style: AppTypography.h4),
+                  Text(name, style: AppTypography.h4),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -340,7 +399,7 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
-                      status,
+                      statusLabel,
                       style: AppTypography.caption.copyWith(
                         color: isScheduled ? AppColors.chipScheduledFg : AppColors.chipDoneFg,
                         fontWeight: FontWeight.w600,
@@ -358,7 +417,7 @@ class _HomePageState extends State<HomePage> {
               const Text('🎂', style: TextStyle(fontSize: 12)),
               const SizedBox(width: 4),
               Text(
-                '생년월일: ${client['birth']}',
+                '생년월일: $birthDate',
                 style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
               ),
             ],
@@ -369,7 +428,7 @@ class _HomePageState extends State<HomePage> {
               const Text('📋', style: TextStyle(fontSize: 12)),
               const SizedBox(width: 4),
               Text(
-                '마지막상담일: ${client['lastSession']}',
+                '마지막상담일: $lastSession',
                 style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
               ),
             ],
@@ -379,12 +438,24 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'SCHEDULED':
+        return '상담예정';
+      case 'COMPLETED':
+        return '상담완료';
+      case 'ACTIVE':
+        return '진행중';
+      default:
+        return status.isNotEmpty ? status : '진행중';
+    }
+  }
+
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: SafeArea(
         child: Column(
           children: [
-            // 닫기 버튼
             Align(
               alignment: Alignment.topRight,
               child: Padding(
@@ -427,7 +498,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            // 하단 프로필 + 로그아웃
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: const BoxDecoration(
@@ -445,7 +515,10 @@ class _HomePageState extends State<HomePage> {
                     child: const Center(child: Text('🧸', style: TextStyle(fontSize: 18))),
                   ),
                   const SizedBox(width: 12),
-                  Text('이복사', style: AppTypography.bodyMedium),
+                  Text(
+                    _workerName.isNotEmpty ? _workerName : '-',
+                    style: AppTypography.bodyMedium,
+                  ),
                   const Spacer(),
                   TextButton(
                     onPressed: () {},
@@ -509,7 +582,8 @@ class _DrawerSectionState extends State<_DrawerSection> {
                 onTap: () => widget.onItemTap(item),
                 child: Padding(
                   padding: const EdgeInsets.only(left: AppSpacing.lg, bottom: AppSpacing.md),
-                  child: Text(item, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                  child: Text(item,
+                      style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
                 ),
               )),
         const Divider(color: AppColors.border, height: 1),

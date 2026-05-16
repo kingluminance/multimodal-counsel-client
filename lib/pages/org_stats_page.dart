@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:dio/dio.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 
-// ── 샘플 데이터 ───────────────────────────────────────────────
+// ── 샘플 데이터 (차트용 — 백엔드 세부 API 없음) ──────────────
 
 class _WorkerStat {
   final String name;
@@ -36,8 +38,46 @@ const _typeStats = [
 
 // ── 페이지 ────────────────────────────────────────────────────
 
-class OrgStatsPage extends StatelessWidget {
+class OrgStatsPage extends StatefulWidget {
   const OrgStatsPage({super.key});
+
+  @override
+  State<OrgStatsPage> createState() => _OrgStatsPageState();
+}
+
+class _OrgStatsPageState extends State<OrgStatsPage> {
+  bool _isLoading = false;
+  int? _totalClients;
+  int? _activeCases;
+  int? _highRisk;
+  double? _avgSessions;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await DashboardService().organization();
+      if (!mounted) return;
+      setState(() {
+        _totalClients = (data['total_clients'] as num?)?.toInt();
+        _activeCases = (data['active_cases'] as num?)?.toInt();
+        _highRisk = (data['high_risk'] as num?)?.toInt();
+        _avgSessions = (data['avg_sessions'] as num?)?.toDouble();
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,41 +104,48 @@ class OrgStatsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── 요약 수치 카드 ─────────────────────────────
-            _SummaryGrid(),
-            const SizedBox(height: 20),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── 요약 수치 카드 ─────────────────────────────
+                  _SummaryGrid(
+                    totalClients: _totalClients,
+                    activeCases: _activeCases,
+                    highRisk: _highRisk,
+                    avgSessions: _avgSessions,
+                  ),
+                  const SizedBox(height: 20),
 
-            // ── 사회복지사별 케이스 수 ─────────────────────
-            _SectionCard(
-              title: '사회복지사별 케이스 수',
-              icon: Icons.people_outline,
-              child: _WorkerBarSection(),
-            ),
-            const SizedBox(height: 16),
+                  // ── 사회복지사별 케이스 수 ─────────────────────
+                  _SectionCard(
+                    title: '사회복지사별 케이스 수',
+                    icon: Icons.people_outline,
+                    child: _WorkerBarSection(),
+                  ),
+                  const SizedBox(height: 16),
 
-            // ── 상담 유형별 도넛 차트 ─────────────────────
-            _SectionCard(
-              title: '상담 유형 분포',
-              icon: Icons.pie_chart_outline,
-              child: _TypeDonutSection(),
-            ),
-            const SizedBox(height: 16),
+                  // ── 상담 유형별 도넛 차트 ─────────────────────
+                  _SectionCard(
+                    title: '상담 유형 분포',
+                    icon: Icons.pie_chart_outline,
+                    child: _TypeDonutSection(),
+                  ),
+                  const SizedBox(height: 16),
 
-            // ── 위험도 분포 ───────────────────────────────
-            _SectionCard(
-              title: '위험도 분포',
-              icon: Icons.warning_amber_outlined,
-              child: const _RiskDistSection(),
+                  // ── 위험도 분포 ───────────────────────────────
+                  _SectionCard(
+                    title: '위험도 분포',
+                    icon: Icons.warning_amber_outlined,
+                    child: const _RiskDistSection(),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -106,6 +153,18 @@ class OrgStatsPage extends StatelessWidget {
 // ── 요약 그리드 ───────────────────────────────────────────────
 
 class _SummaryGrid extends StatelessWidget {
+  final int? totalClients;
+  final int? activeCases;
+  final int? highRisk;
+  final double? avgSessions;
+
+  const _SummaryGrid({
+    this.totalClients,
+    this.activeCases,
+    this.highRisk,
+    this.avgSessions,
+  });
+
   @override
   Widget build(BuildContext context) {
     return GridView.count(
@@ -115,32 +174,34 @@ class _SummaryGrid extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       childAspectRatio: 1.7,
-      children: const [
+      children: [
         _SummaryCard(
           label: '전체 내담자',
-          value: '85',
+          value: totalClients?.toString() ?? '-',
           unit: '명',
           icon: Icons.people_outline,
           color: AppColors.primary,
         ),
         _SummaryCard(
-          label: '이번 달 상담',
-          value: '147',
+          label: '활성 케이스',
+          value: activeCases?.toString() ?? '-',
           unit: '건',
           icon: Icons.chat_bubble_outline,
           color: AppColors.primaryDark,
         ),
         _SummaryCard(
           label: '고위험 케이스',
-          value: '12',
+          value: highRisk?.toString() ?? '-',
           unit: '건',
           icon: Icons.warning_amber_outlined,
           color: AppColors.red,
         ),
         _SummaryCard(
-          label: '사회복지사',
-          value: '8',
-          unit: '명',
+          label: '평균 회기수',
+          value: avgSessions != null
+              ? avgSessions!.toStringAsFixed(1)
+              : '-',
+          unit: '회',
           icon: Icons.badge_outlined,
           color: AppColors.purple,
         ),

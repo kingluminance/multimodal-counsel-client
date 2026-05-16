@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -11,20 +13,71 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  final List<_NotifItem> _items = [
-    _NotifItem(text: '홍길동님 오늘 오후 3시 상담 예정입니다.', date: '2026.01.06 13:30', isRead: false),
-    _NotifItem(text: '김홍동님 내일 오전 10시 상담 예정입니다.', date: '2026.01.05 09:00', isRead: false),
-    _NotifItem(text: '새로 올라온 공지사항이 있습니다.', date: '2026.01.04 18:00', isRead: false),
-    _NotifItem(text: '박서연님 상담이 완료되었습니다.', date: '2026.01.03 16:30', isRead: true),
-    _NotifItem(text: '이번 주 상담 일정을 확인해보세요.', date: '2026.01.02 08:00', isRead: true),
-  ];
+  List<_NotifItem> _items = [];
+  bool _isLoading = false;
 
-  void _markAllRead() {
-    setState(() {
-      for (final item in _items) {
-        item.isRead = true;
-      }
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await NotificationService().list();
+      if (!mounted) return;
+      final list = data['notifications'] as List<dynamic>? ?? [];
+      setState(() {
+        _items = list.map((e) {
+          final map = e as Map<String, dynamic>;
+          return _NotifItem(
+            notificationId: map['notification_id']?.toString() ?? '',
+            text: map['message']?.toString() ?? '',
+            date: map['created_at']?.toString() ?? '',
+            isRead: map['is_read'] as bool? ?? false,
+          );
+        }).toList();
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _markAllRead() async {
+    try {
+      await NotificationService().markAllRead();
+      if (!mounted) return;
+      setState(() {
+        for (final item in _items) {
+          item.isRead = true;
+        }
+      });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Future<void> _markRead(_NotifItem item) async {
+    if (item.isRead) return;
+    try {
+      await NotificationService().markRead(item.notificationId);
+      if (!mounted) return;
+      setState(() => item.isRead = true);
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
@@ -94,56 +147,58 @@ class _NotificationPageState extends State<NotificationPage> {
                   const Divider(color: AppColors.border, height: 1),
                   // 알림 목록
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: _items.length,
-                      separatorBuilder: (_, __) => const Divider(color: AppColors.border, height: 1),
-                      itemBuilder: (context, i) {
-                        final item = _items[i];
-                        return GestureDetector(
-                          onTap: () => setState(() => item.isRead = true),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                            child: Opacity(
-                              opacity: item.isRead ? 0.5 : 1.0,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(
-                                    Icons.notifications_outlined,
-                                    color: AppColors.textSecondary,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ListView.separated(
+                            itemCount: _items.length,
+                            separatorBuilder: (_, __) => const Divider(color: AppColors.border, height: 1),
+                            itemBuilder: (context, i) {
+                              final item = _items[i];
+                              return GestureDetector(
+                                onTap: () => _markRead(item),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                                  child: Opacity(
+                                    opacity: item.isRead ? 0.5 : 1.0,
+                                    child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(item.text, style: AppTypography.bodySmall),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          item.date,
-                                          style: AppTypography.caption.copyWith(color: AppColors.textHint),
+                                        const Icon(
+                                          Icons.notifications_outlined,
+                                          color: AppColors.textSecondary,
+                                          size: 18,
                                         ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(item.text, style: AppTypography.bodySmall),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                item.date,
+                                                style: AppTypography.caption.copyWith(color: AppColors.textHint),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (!item.isRead)
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            margin: const EdgeInsets.only(top: 4),
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.danger,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
-                                  if (!item.isRead)
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      margin: const EdgeInsets.only(top: 4),
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.danger,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -173,9 +228,15 @@ class _NotificationPageState extends State<NotificationPage> {
 }
 
 class _NotifItem {
+  final String notificationId;
   final String text;
   final String date;
   bool isRead;
 
-  _NotifItem({required this.text, required this.date, required this.isRead});
+  _NotifItem({
+    required this.notificationId,
+    required this.text,
+    required this.date,
+    required this.isRead,
+  });
 }

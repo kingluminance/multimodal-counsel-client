@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// 모든 API 서비스가 공유하는 Dio 기반 HTTP 클라이언트.
 /// AUTH-TOKEN 헤더 자동 주입 및 401 시 토큰 갱신 인터셉터 포함.
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8080';
+  static String get baseUrl =>
+      dotenv.env['BASE_URL'] ?? 'http://localhost:8080';
   static const String _tokenKey = 'access_token';
   static const String _refreshKey = 'refresh_token';
 

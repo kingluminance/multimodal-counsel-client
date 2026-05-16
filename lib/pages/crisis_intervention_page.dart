@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_typography.dart';
 import '../widgets/primary_button.dart';
+import '../services/services.dart';
 
 // ── 결과 모델 ─────────────────────────────────────────────────
 
@@ -24,12 +26,14 @@ class _CheckItem {
   final String id;
   final String label;
   final bool triggersAlert; // 체크 시 API 호출
+  final bool required;
   bool checked;
 
   _CheckItem({
     required this.id,
     required this.label,
     this.triggersAlert = false,
+    this.required = false,
     this.checked = false,
   });
 }
@@ -44,14 +48,15 @@ const _crisisTypes = [
   '경제위기',
 ];
 
-const _supervisorName = '이상훈';
-
 // ── 진입 헬퍼 ─────────────────────────────────────────────────
 
-Future<CrisisResult?> showCrisisIntervention(BuildContext context) {
+Future<CrisisResult?> showCrisisIntervention(
+    BuildContext context, {
+    required String sessionId,
+  }) {
   return Navigator.of(context).push<CrisisResult>(
     MaterialPageRoute(
-      builder: (_) => const CrisisInterventionPage(),
+      builder: (_) => CrisisInterventionPage(sessionId: sessionId),
       fullscreenDialog: true,
     ),
   );
@@ -60,7 +65,12 @@ Future<CrisisResult?> showCrisisIntervention(BuildContext context) {
 // ── 페이지 ────────────────────────────────────────────────────
 
 class CrisisInterventionPage extends StatefulWidget {
-  const CrisisInterventionPage({super.key});
+  final String sessionId;
+
+  const CrisisInterventionPage({
+    super.key,
+    this.sessionId = '',
+  });
 
   @override
   State<CrisisInterventionPage> createState() => _CrisisInterventionPageState();
@@ -69,8 +79,8 @@ class CrisisInterventionPage extends StatefulWidget {
 class _CrisisInterventionPageState extends State<CrisisInterventionPage> {
   final Set<String> _selectedTypes = {};
 
-  late final List<_CheckItem> _checklist = [
-    _CheckItem(id: 'safety', label: '안전 여부 확인'),
+  List<_CheckItem> _checklist = [
+    _CheckItem(id: 'safety', label: '안전 여부 확인', required: true),
     _CheckItem(id: 'supervisor', label: '슈퍼바이저 알림 발송', triggersAlert: true),
     _CheckItem(id: 'report', label: '신고 기관 연계'),
     _CheckItem(id: 'guardian', label: '보호자 연락'),
@@ -78,6 +88,46 @@ class _CrisisInterventionPageState extends State<CrisisInterventionPage> {
 
   bool _notified = false;
   bool _notifying = false;
+  bool _isLoading = false;
+  String _supervisorName = '슈퍼바이저';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.sessionId.isNotEmpty) {
+      _loadChecklist();
+    }
+  }
+
+  Future<void> _loadChecklist() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await FlowService().getCrisisChecklist(widget.sessionId);
+      if (!mounted) return;
+      final items = data['items'] as List<dynamic>? ?? [];
+      if (items.isNotEmpty) {
+        setState(() {
+          _checklist = items.map((e) {
+            final map = e as Map<String, dynamic>;
+            return _CheckItem(
+              id: map['id']?.toString() ?? '',
+              label: map['label']?.toString() ?? '',
+              required: map['required'] as bool? ?? false,
+              triggersAlert: map['id']?.toString() == 'supervisor',
+              checked: map['done'] as bool? ?? false,
+            );
+          }).toList();
+        });
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   bool get _canComplete => _selectedTypes.isNotEmpty;
 
@@ -85,16 +135,71 @@ class _CrisisInterventionPageState extends State<CrisisInterventionPage> {
     setState(() => item.checked = value);
 
     if (item.triggersAlert && value && !_notified) {
-      // 슈퍼바이저 알림 API 시뮬레이션
       setState(() => _notifying = true);
       HapticFeedback.mediumImpact();
-      await Future.delayed(const Duration(milliseconds: 1200));
+      // 위기 프로토콜 활성화 API 호출
+      if (widget.sessionId.isNotEmpty && _selectedTypes.isNotEmpty) {
+        try {
+          final data = await FlowService().activateCrisisProtocol(
+            widget.sessionId,
+            crisisType: _selectedTypes.join(','),
+          );
+          if (!mounted) return;
+          final notified = data['notified'] as List<dynamic>? ?? [];
+          if (notified.isNotEmpty) {
+            setState(() => _supervisorName = notified.first?.toString() ?? '슈퍼바이저');
+          }
+        } on DioException catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString())),
+          );
+        }
+      } else {
+        await Future.delayed(const Duration(milliseconds: 1200));
+      }
       if (mounted) {
         setState(() {
           _notifying = false;
           _notified = true;
         });
       }
+    }
+
+    // 체크리스트 완료 상태 전송
+    if (widget.sessionId.isNotEmpty) {
+      _submitChecklist();
+    }
+  }
+
+  Future<void> _submitChecklist() async {
+    try {
+      final items = _checklist.map((c) => {
+            'id': c.id,
+            'done': c.checked,
+          }).toList();
+      final data = await FlowService().completeCrisisChecklist(
+        widget.sessionId,
+        checklistItems: items,
+      );
+      if (!mounted) return;
+      final allRequiredDone = data['all_required_done'] as bool? ?? true;
+      if (!allRequiredDone) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '필수 체크리스트 항목을 모두 완료해주세요.',
+              style: TextStyle(fontFamily: 'Pretendard'),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
   }
 
@@ -119,111 +224,113 @@ class _CrisisInterventionPageState extends State<CrisisInterventionPage> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
-      body: Column(
-        children: [
-          // ── 최상단 Red 배너 ──────────────────────────────────
-          _RedBanner(safeTop: safeTop),
-
-          // ── 스크롤 영역 ──────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 위기 유형 선택
-                  const _SectionLabel('위기 유형 선택'),
-                  const SizedBox(height: 10),
-                  _CrisisTypeGrid(
-                    selected: _selectedTypes,
-                    onToggle: (t) => setState(() {
-                      _selectedTypes.contains(t)
-                          ? _selectedTypes.remove(t)
-                          : _selectedTypes.add(t);
-                    }),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // 체크리스트
-                  const _SectionLabel('조치 체크리스트'),
-                  const SizedBox(height: 10),
-                  _Checklist(
-                    items: _checklist,
-                    onChanged: _handleCheck,
-                    notifying: _notifying,
-                    notified: _notified,
-                  ),
-
-                  // 슈퍼바이저 알림 확인 배너
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    child: _notified
-                        ? const Padding(
-                            padding: EdgeInsets.only(top: 12),
-                            child: _NotifiedBanner(name: _supervisorName),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── 하단 버튼 ─────────────────────────────────────────
-          Container(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + safeBottom),
-            decoration: const BoxDecoration(
-              color: AppColors.backgroundWhite,
-              border: Border(top: BorderSide(color: AppColors.border)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                if (!_canComplete)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      '위기 유형을 1개 이상 선택해야 기록할 수 있습니다.',
-                      style: TextStyle(
-                        fontFamily: 'Pretendard',
-                        fontSize: 12,
-                        color: AppColors.textHint,
-                      ),
-                      textAlign: TextAlign.center,
+                // ── 최상단 Red 배너 ──────────────────────────────────
+                _RedBanner(safeTop: safeTop),
+
+                // ── 스크롤 영역 ──────────────────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 위기 유형 선택
+                        const _SectionLabel('위기 유형 선택'),
+                        const SizedBox(height: 10),
+                        _CrisisTypeGrid(
+                          selected: _selectedTypes,
+                          onToggle: (t) => setState(() {
+                            _selectedTypes.contains(t)
+                                ? _selectedTypes.remove(t)
+                                : _selectedTypes.add(t);
+                          }),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 체크리스트
+                        const _SectionLabel('조치 체크리스트'),
+                        const SizedBox(height: 10),
+                        _Checklist(
+                          items: _checklist,
+                          onChanged: _handleCheck,
+                          notifying: _notifying,
+                          notified: _notified,
+                        ),
+
+                        // 슈퍼바이저 알림 확인 배너
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          child: _notified
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: _NotifiedBanner(name: _supervisorName),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
                     ),
                   ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: _canComplete ? _complete : null,
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text(
-                      '조치 완료 기록',
-                      style: TextStyle(
-                        fontFamily: 'Pretendard',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                ),
+
+                // ── 하단 버튼 ─────────────────────────────────────────
+                Container(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + safeBottom),
+                  decoration: const BoxDecoration(
+                    color: AppColors.backgroundWhite,
+                    border: Border(top: BorderSide(color: AppColors.border)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!_canComplete)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            '위기 유형을 1개 이상 선택해야 기록할 수 있습니다.',
+                            style: TextStyle(
+                              fontFamily: 'Pretendard',
+                              fontSize: 12,
+                              color: AppColors.textHint,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _canComplete ? _complete : null,
+                          icon: const Icon(Icons.check_circle_outline, size: 18),
+                          label: const Text(
+                            '조치 완료 기록',
+                            style: TextStyle(
+                              fontFamily: 'Pretendard',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.red,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.red.withOpacity(0.4),
+                            disabledForegroundColor: Colors.white60,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.red,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.red.withOpacity(0.4),
-                      disabledForegroundColor: Colors.white60,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

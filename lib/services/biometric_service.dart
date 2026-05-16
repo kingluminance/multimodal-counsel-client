@@ -66,10 +66,9 @@ class BiometricService {
       );
 
       response.data!.stream
-          .transform(StreamTransformer<List<int>, String>.fromHandlers(
-            handleData: (data, sink) =>
-                sink.add(const Utf8Decoder().convert(data)),
-          ))
+          .cast<List<int>>()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
           .listen(
         (line) {
           if (line.startsWith('data:')) {

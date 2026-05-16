@@ -1,8 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/theme/app_colors.dart';
-import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 import '../widgets/main_scaffold.dart';
+import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,207 +15,268 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _idController = TextEditingController();
-  final _pwController = TextEditingController();
-  bool _autoLogin = false;
-  bool _showError = false;
-  bool _obscure = true;
+  bool _isLoading = false;
+  final _storage = const FlutterSecureStorage();
 
-  @override
-  void dispose() {
-    _idController.dispose();
-    _pwController.dispose();
-    super.dispose();
-  }
+  Future<void> _onOAuthLogin(String provider) async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final result = await AuthService().oauthCallback(
+        provider: provider,
+        oauthCode: '',
+        redirectUri: 'deepcare://callback',
+      );
+      if (!mounted) return;
 
-  void _onLogin() {
-    if (_pwController.text.isEmpty) {
-      setState(() => _showError = true);
-      return;
+      final status = result['status'] as String?;
+      if (status == 'new_user') {
+        final oauthToken = result['oauth_token'] as String? ?? '';
+        await _storage.write(key: 'oauth_token', value: oauthToken);
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SignupPage()),
+        );
+      } else if (status == 'existing_user') {
+        await ApiClient().saveTokens(
+          accessToken: result['access_token'] as String? ?? '',
+          refreshToken: result['refresh_token'] as String? ?? '',
+        );
+        if (result['user_id'] != null) {
+          await _storage.write(key: 'user_id', value: result['user_id'].toString());
+        }
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainScaffold()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      String message = '로그인 중 오류가 발생했습니다.';
+      if (e is DioException && e.response != null) {
+        message = e.response?.data?['message'] as String? ?? message;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainScaffold()),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, size: 28),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: Text('로그인', style: AppTypography.h3),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 60, left: 28, right: 28, bottom: 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text('🧸', style: TextStyle(fontSize: 32)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '강원대 돌봄케어 솔루션',
-              style: AppTypography.h3.copyWith(color: AppColors.primary),
-            ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: _idController,
-              decoration: InputDecoration(
-                hintText: '아이디를 입력해주세요.',
-                hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textHint),
-                filled: true,
-                fillColor: AppColors.backgroundSubtle,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            children: [
+              const Spacer(flex: 2),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.lg,
+                child: const Center(
+                  child: Text('🧸', style: TextStyle(fontSize: 32)),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _pwController,
-              obscureText: _obscure,
-              onChanged: (_) {
-                if (_showError) setState(() => _showError = false);
-              },
-              decoration: InputDecoration(
-                hintText: '비밀번호를 입력해주세요.',
-                hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textHint),
-                filled: true,
-                fillColor: AppColors.backgroundSubtle,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.lg,
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    color: AppColors.textHint,
-                  ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
+              const SizedBox(height: 12),
+              Text(
+                '강원대 돌봄케어 솔루션',
+                style: AppTypography.h3.copyWith(color: AppColors.primary),
               ),
-            ),
-            if (_showError) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.circle, color: AppColors.danger, size: 8),
-                  const SizedBox(width: 6),
-                  Text(
-                    '비밀번호를 확인해주세요.',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.danger),
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                'SNS 계정으로 간편하게 로그인하세요',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
               ),
+              const Spacer(flex: 2),
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 24),
+                  child: CircularProgressIndicator(),
+                ),
+              _OAuthButton(
+                label: 'Google로 로그인',
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimary,
+                borderColor: AppColors.border,
+                icon: _GoogleIcon(),
+                onTap: _isLoading ? null : () => _onOAuthLogin('google'),
+              ),
+              const SizedBox(height: 12),
+              _OAuthButton(
+                label: '카카오로 로그인',
+                backgroundColor: const Color(0xFFFEE500),
+                foregroundColor: const Color(0xFF191919),
+                icon: const _KakaoIcon(),
+                onTap: _isLoading ? null : () => _onOAuthLogin('kakao'),
+              ),
+              const SizedBox(height: 12),
+              _OAuthButton(
+                label: '네이버로 로그인',
+                backgroundColor: const Color(0xFF03C75A),
+                foregroundColor: Colors.white,
+                icon: const _NaverIcon(),
+                onTap: _isLoading ? null : () => _onOAuthLogin('naver'),
+              ),
+              const Spacer(flex: 1),
             ],
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _onLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary300,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text('로그인', style: AppTypography.buttonText),
-              ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OAuthButton extends StatelessWidget {
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color? borderColor;
+  final Widget icon;
+  final VoidCallback? onTap;
+
+  const _OAuthButton({
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    this.borderColor,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: borderColor != null
+                  ? Border.all(color: borderColor!, width: 1)
+                  : null,
             ),
-            const SizedBox(height: 16),
-            Row(
+            child: Row(
               children: [
-                GestureDetector(
-                  onTap: () => setState(() => _autoLogin = !_autoLogin),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _autoLogin ? Icons.check_box : Icons.check_box_outline_blank,
-                        color: _autoLogin ? AppColors.primary : AppColors.textHint,
-                        size: 20,
+                const SizedBox(width: 20),
+                icon,
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: 'Pretendard',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: foregroundColor,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '자동로그인',
-                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    '아이디 찾기',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                  ),
-                ),
-                Text(
-                  '  |  ',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.border),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    '비밀번호 찾기',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                  ),
-                ),
+                const SizedBox(width: 44),
               ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: CustomPaint(painter: _GooglePainter()),
+    );
+  }
+}
+
+class _GooglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Draw a simplified G logo
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -0.3,
+      3.9,
+      false,
+      paint..style = PaintingStyle.stroke..strokeWidth = size.width * 0.2,
+    );
+    paint
+      ..style = PaintingStyle.fill
+      ..color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(center.dx, center.dy - size.height * 0.1, radius, size.height * 0.2),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _KakaoIcon extends StatelessWidget {
+  const _KakaoIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 24,
+      height: 24,
+      child: Center(
+        child: Text(
+          'K',
+          style: TextStyle(
+            fontFamily: 'Pretendard',
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF191919),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NaverIcon extends StatelessWidget {
+  const _NaverIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 24,
+      height: 24,
+      child: Center(
+        child: Text(
+          'N',
+          style: TextStyle(
+            fontFamily: 'Pretendard',
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
         ),
       ),
     );

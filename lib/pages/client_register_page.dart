@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
+import '../services/services.dart';
 import 'notification_page.dart';
 
 class ClientRegisterPage extends StatefulWidget {
@@ -22,6 +24,7 @@ class _ClientRegisterPageState extends State<ClientRegisterPage> {
   int _birthYear = 1990;
   int _birthMonth = 1;
   int _birthDay = 1;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,8 +36,51 @@ class _ClientRegisterPageState extends State<ClientRegisterPage> {
     super.dispose();
   }
 
-  void _onRegister() {
-    Navigator.of(context).pop();
+  Future<void> _onRegister() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이름을 입력해주세요.')),
+      );
+      return;
+    }
+
+    final birthDate =
+        '$_birthYear-${_birthMonth.toString().padLeft(2, '0')}-${_birthDay.toString().padLeft(2, '0')}';
+
+    final data = <String, dynamic>{
+      'name': name,
+      'phone': _phoneController.text.trim(),
+      'address': _addressController.text.trim(),
+      'birth_date': birthDate,
+      'gender': _gender,
+      'memo': _memoController.text.trim(),
+    };
+
+    final email = _emailController.text.trim();
+    if (email.isNotEmpty) {
+      data['email'] = email;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await ClientService().register(data);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = e.response?.data?['message'] ?? '등록에 실패했습니다.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('등록에 실패했습니다.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -195,7 +241,7 @@ class _ClientRegisterPageState extends State<ClientRegisterPage> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _onRegister,
+                onPressed: _isLoading ? null : _onRegister,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
@@ -203,7 +249,16 @@ class _ClientRegisterPageState extends State<ClientRegisterPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                   elevation: 0,
                 ),
-                child: Text('등록하기', style: AppTypography.buttonText),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                        ),
+                      )
+                    : Text('등록하기', style: AppTypography.buttonText),
               ),
             ),
           ),
